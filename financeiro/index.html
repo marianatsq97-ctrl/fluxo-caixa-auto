@@ -1,26 +1,56 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Login</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body class="login-body">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Financeiro | Entrar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body data-page="login">
+    <main class="page page-login">
+      <section class="login-card premium-card centered-panel">
+        <img class="logo" src="logo.png" alt="Logo Areia Ana | Flux" />
+        <span class="eyebrow">Módulo financeiro</span>
+        <h1>Entrar</h1>
+        <p class="page-description">
+          Acesse o ambiente financeiro para carregar relatórios e acompanhar indicadores executivos.
+        </p>
 
-<div class="login-card">
-    <img src="../logo.png" class="logo">
+        <form id="loginForm" class="form-grid" novalidate>
+          <label class="field">
+            <span>Usuário</span>
+            <input id="username" name="username" type="text" autocomplete="username" placeholder="Digite seu usuário" required />
+          </label>
 
-    <h2>Entrar</h2>
-    <p>Acesse o painel financeiro</p>
+          <label class="field">
+            <span>Senha</span>
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Digite sua senha" required />
+          </label>
 
-    <input id="user" placeholder="Usuário">
-    <input id="pass" type="password" placeholder="Senha">
+          <button class="btn btn-primary btn-block" type="submit">Acessar</button>
+          <p id="loginMessage" class="form-message" role="alert" aria-live="polite"></p>
+        </form>
 
-    <button onclick="login()">Acessar painel</button>
+        <div class="credentials-box">
+          <div>
+            <strong>Admin</strong>
+            <span>admin / admin123</span>
+          </div>
+          <div>
+            <strong>Usuário</strong>
+            <span>usuario / 123</span>
+          </div>
+        </div>
+      </section>
+    </main>
 
-    <p id="msg"></p>
-</div>
-
-<script src="app.js"></script>
-</body>
+    <script src="utils.js"></script>
+    <script src="app.js"></script>
+  </body>
 </html>
