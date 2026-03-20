@@ -1,20 +1,89 @@
 <!DOCTYPE html>
-<html>
-<head>
-<title>Dashboard</title>
-</head>
-<body style="background:#050814;color:white;font-family:Arial">
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Financeiro | Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body data-page="dashboard">
+    <main class="page page-login dashboard-page">
+      <section class="premium-card dashboard-card centered-panel wide-panel">
+        <header class="panel-header dashboard-header">
+          <img class="logo brand-logo" src="logo.png" alt="Logo Areia Ana | Flux" />
+          <span class="eyebrow">Dashboard executivo</span>
+          <h1>Visão de Caixa</h1>
+          <p class="page-description">Indicadores financeiros e tabela detalhada da base processada no admin.</p>
+          <div class="upload-actions dashboard-actions">
+            <a class="btn btn-secondary" href="admin.html">Admin</a>
+            <button class="btn btn-ghost" id="logoutButton" type="button">Sair</button>
+          </div>
+        </header>
 
-<h1>Dashboard Financeiro</h1>
+        <div class="stats-grid dashboard-stats simple-stats">
+          <article class="stat-card accent">
+            <span>Total de registros</span>
+            <strong id="totalRegistros">0</strong>
+          </article>
+          <article class="stat-card">
+            <span>Soma dos valores</span>
+            <strong id="totalValores">R$ 0,00</strong>
+          </article>
+          <article class="stat-card">
+            <span>Total vencido</span>
+            <strong id="totalVencido">R$ 0,00</strong>
+          </article>
+          <article class="stat-card">
+            <span>Total a vencer</span>
+            <strong id="totalAVencer">R$ 0,00</strong>
+          </article>
+        </div>
 
-<div id="dados"></div>
+        <div id="dashboardEmptyState" class="status-banner is-idle hidden-banner">
+          Nenhum dado processado ainda. Faça o upload de uma planilha no admin para visualizar o dashboard.
+        </div>
 
-<script>
-const data = JSON.parse(localStorage.getItem("dados") || "[]");
+        <section class="admin-content-grid full-width-grid">
+          <article class="premium-card inner-card full-span">
+            <div class="section-heading compact-heading">
+              <div>
+                <span class="eyebrow">Tabela</span>
+                <h2>Dados processados</h2>
+              </div>
+              <div class="meta-pill" id="dashboardUpdatedAt">Sem atualização</div>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Data</th>
+                    <th>Vencimento</th>
+                    <th>Valor</th>
+                    <th>Valor Pago</th>
+                    <th>Saldo</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="detailsTable">
+                  <tr>
+                    <td colspan="7" class="empty-state-cell">Nenhum dado disponível.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </section>
+    </main>
 
-document.getElementById("dados").innerText =
-    "Registros carregados: " + data.length;
-</script>
-
-</body>
+    <script src="utils.js"></script>
+    <script src="app.js"></script>
+  </body>
 </html>
