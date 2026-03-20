@@ -239,8 +239,9 @@
         const paymentDate = record.paymentDate ? new Date(record.paymentDate) : null;
 
         summary.totalReceber += record.saldo;
-        if (record.status === 'vencido') summary.totalVencido += record.saldo;
-        if (record.status === 'a vencer') summary.totalAVencer += record.saldo;
+        const normalizedStatus = normalizeText(record.status);
+        if (normalizedStatus === 'vencido') summary.totalVencido += record.saldo;
+        if (normalizedStatus === 'a vencer' || normalizedStatus === 'vence hoje') summary.totalAVencer += record.saldo;
 
         if (paymentDate && paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear) {
           summary.faturamentoMes += record.paidAmount || (record.status === 'quitado' ? record.amount : 0);
@@ -269,7 +270,7 @@
 
   function aggregateLateClients(records) {
     const grouped = new Map();
-    records.filter((record) => record.status === 'vencido').forEach((record) => {
+    records.filter((record) => normalizeText(record.status) === 'vencido').forEach((record) => {
       const current = grouped.get(record.client) || { client: record.client, count: 0, saldo: 0 };
       current.count += 1;
       current.saldo += record.saldo;
@@ -281,7 +282,7 @@
 
   function upcomingRecords(records) {
     return records
-      .filter((record) => record.status === 'a vencer')
+      .filter((record) => ['a vencer', 'vence hoje'].includes(normalizeText(record.status)))
       .sort((a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0))
       .slice(0, 10);
   }
