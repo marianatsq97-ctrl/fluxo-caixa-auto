@@ -1,7 +1,7 @@
 (function () {
   const STORAGE_KEYS = {
     session: 'aa_finance_session',
-    financeData: 'aa_finance_data'
+    financeData: 'financeData'
   };
 
   const REQUIRED_SHEET = 'Cálculos de Projeção';
@@ -309,7 +309,7 @@
 
   function getFinanceData() {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.financeData) || 'null');
+      return JSON.parse(localStorage.getItem(STORAGE_KEYS.financeData) || localStorage.getItem('aa_finance_data') || 'null');
     } catch (error) {
       return null;
     }
