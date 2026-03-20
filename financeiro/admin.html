@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin</title>
+</head>
+<body style="background:#050814;color:white;font-family:Arial">
+
+<h2>Upload de Planilha</h2>
+
+<input type="file" id="file" accept=".xlsx,.xls,.xlsm,.xlsb,.csv">
+<br><br>
+
+<button onclick="upload()">Processar</button>
+
+<p id="msg"></p>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<script>
+function upload() {
+    const file = document.getElementById("file").files[0];
+    if (!file) return alert("Selecione um arquivo");
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: "array" });
+
+        let sheet;
+
+        if (file.name.endsWith(".csv")) {
+            sheet = wb.Sheets[wb.SheetNames[0]];
+        } else {
+            if (!wb.Sheets["Cálculos de Projeção"]) {
+                document.getElementById("msg").innerText = "Aba não encontrada";
+                return;
+            }
+            sheet = wb.Sheets["Cálculos de Projeção"];
+        }
+
+        const json = XLSX.utils.sheet_to_json(sheet);
+
+        localStorage.setItem("dados", JSON.stringify(json));
+
+        document.getElementById("msg").innerText = "Arquivo carregado!";
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+</script>
+
+</body>
+</html>
