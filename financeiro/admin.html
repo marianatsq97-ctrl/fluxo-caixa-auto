@@ -1,54 +1,160 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Admin</title>
-</head>
-<body style="background:#050814;color:white;font-family:Arial">
-
-<h2>Upload de Planilha</h2>
-
-<input type="file" id="file" accept=".xlsx,.xls,.xlsm,.xlsb,.csv">
-<br><br>
-
-<button onclick="upload()">Processar</button>
-
-<p id="msg"></p>
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
-<script>
-function upload() {
-    const file = document.getElementById("file").files[0];
-    if (!file) return alert("Selecione um arquivo");
-
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        const wb = XLSX.read(data, { type: "array" });
-
-        let sheet;
-
-        if (file.name.endsWith(".csv")) {
-            sheet = wb.Sheets[wb.SheetNames[0]];
-        } else {
-            if (!wb.Sheets["Cálculos de Projeção"]) {
-                document.getElementById("msg").innerText = "Aba não encontrada";
-                return;
-            }
-            sheet = wb.Sheets["Cálculos de Projeção"];
-        }
-
-        const json = XLSX.utils.sheet_to_json(sheet);
-
-        localStorage.setItem("dados", JSON.stringify(json));
-
-        document.getElementById("msg").innerText = "Arquivo carregado!";
-    };
-
-    reader.readAsArrayBuffer(file);
-}
-</script>
-
-</body>
-</html>
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/financeiro/admin.html b/financeiro/admin.html
+new file mode 100644
+index 0000000000000000000000000000000000000000..967e5d2a44dd41c539bca01d5a9269f2c1d45511
+--- /dev/null
++++ b/financeiro/admin.html
+@@ -0,0 +1,150 @@
++<!DOCTYPE html>
++<html lang="pt-BR">
++  <head>
++    <meta charset="UTF-8" />
++    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
++    <title>Financeiro | Admin</title>
++    <link rel="preconnect" href="https://fonts.googleapis.com" />
++    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
++    <link
++      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
++      rel="stylesheet"
++    />
++    <link rel="stylesheet" href="style.css?v=20260320-1" />
++  </head>
++  <body data-page="admin">
++    <main class="page page-shell">
++      <header class="topbar premium-card">
++        <div class="brand-block">
++          <img class="brand-logo" src="logo.png" alt="Logo Areia Ana | Flux" />
++          <div>
++            <span class="eyebrow">Administração financeira</span>
++            <h1>Areia Ana | Visão de Caixa</h1>
++            <p>Upload, processamento e persistência local prontos para GitHub Pages.</p>
++          </div>
++        </div>
++        <div class="topbar-actions">
++          <div class="session-badge">
++            <span>Perfil</span>
++            <strong id="sessionRole">admin</strong>
++          </div>
++          <a class="btn btn-secondary" href="dashboard.html">Ver dashboard</a>
++          <button class="btn btn-ghost" id="logoutButton" type="button">Sair</button>
++        </div>
++      </header>
++
++      <section class="grid-two-columns">
++        <article class="premium-card hero-card">
++          <span class="eyebrow">Upload de planilhas</span>
++          <h2>Central de consolidação financeira</h2>
++          <p>
++            Importe relatórios Excel ou CSV, processe automaticamente os dados e publique uma visão executiva pronta
++            para consulta no dashboard.
++          </p>
++          <div class="chip-row">
++            <span class="chip chip-accent">Aba obrigatória: Cálculos de Projeção</span>
++            <span class="chip">CSV tratado em fluxo dedicado</span>
++            <span class="chip">Persistência em localStorage</span>
++          </div>
++        </article>
++
++        <aside class="premium-card checklist-card">
++          <span class="eyebrow">Checklist</span>
++          <ul class="checklist">
++            <li>Selecione arquivos <strong>.xlsx, .xls, .xlsm, .xlsb ou .csv</strong>.</li>
++            <li>Planilhas Excel usam a aba <strong>Cálculos de Projeção</strong>.</li>
++            <li>O processamento identifica colunas, datas e valores automaticamente.</li>
++          </ul>
++        </aside>
++      </section>
++
++      <section class="premium-card upload-card">
++        <div class="section-heading">
++          <div>
++            <span class="eyebrow">Processamento</span>
++            <h2>Enviar arquivo financeiro</h2>
++          </div>
++          <div class="meta-pill" id="lastFileHint">Nenhum arquivo carregado</div>
++        </div>
++
++        <label class="upload-dropzone" for="fileInput">
++          <input
++            id="fileInput"
++            type="file"
++            accept=".xlsx,.xls,.xlsm,.xlsb,.csv"
++          />
++          <span class="upload-icon">⬆</span>
++          <strong>Selecionar arquivo</strong>
++          <small>Formatos aceitos: .xlsx, .xls, .xlsm, .xlsb, .csv</small>
++        </label>
++
++        <div id="processingMessage" class="status-banner is-idle" aria-live="polite">
++          Aguardando arquivo para processamento.
++        </div>
++
++        <div class="stats-grid compact-grid">
++          <article class="stat-card">
++            <span>Arquivo</span>
++            <strong id="fileNameValue">-</strong>
++          </article>
++          <article class="stat-card">
++            <span>Registros processados</span>
++            <strong id="recordsValue">0</strong>
++          </article>
++          <article class="stat-card">
++            <span>Atualizado em</span>
++            <strong id="updatedAtValue">-</strong>
++          </article>
++        </div>
++      </section>
++
++      <section class="grid-two-columns detail-grid">
++        <article class="premium-card">
++          <div class="section-heading">
++            <div>
++              <span class="eyebrow">Resumo</span>
++              <h2>Metadados da última carga</h2>
++            </div>
++          </div>
++          <dl class="data-list" id="metadataList">
++            <div><dt>Origem</dt><dd>Sem carga processada.</dd></div>
++            <div><dt>Atualização</dt><dd>-</dd></div>
++            <div><dt>Colunas mapeadas</dt><dd>-</dd></div>
++          </dl>
++        </article>
++
++        <article class="premium-card">
++          <div class="section-heading">
++            <div>
++              <span class="eyebrow">Prévia</span>
++              <h2>Amostra de registros tratados</h2>
++            </div>
++          </div>
++          <div class="table-shell">
++            <table>
++              <thead>
++                <tr>
++                  <th>Cliente</th>
++                  <th>Vencimento</th>
++                  <th>Valor</th>
++                  <th>Saldo</th>
++                  <th>Status</th>
++                </tr>
++              </thead>
++              <tbody id="previewTableBody">
++                <tr>
++                  <td colspan="5" class="empty-state-cell">A prévia será exibida após o processamento.</td>
++                </tr>
++              </tbody>
++            </table>
++          </div>
++        </article>
++      </section>
++    </main>
++
++    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
++    <script src="utils.js?v=20260320-1"></script>
++    <script src="app.js?v=20260320-1"></script>
++    <script src="admin.js?v=20260320-1"></script>
++  </body>
++</html>
+ 
+EOF
+)
