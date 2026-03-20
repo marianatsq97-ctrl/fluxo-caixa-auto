@@ -15,71 +15,86 @@
   } = window.FinanceiroUtils;
 
   const STORAGE_KEYS = {
-    rawBase: 'base_financeira',
-    updatedAt: 'ultima_atualizacao'
+    legacyBase: 'base_financeira',
+    legacyUpdatedAt: 'ultima_atualizacao'
   };
 
   const COLUMN_ALIASES = {
-    cliente: ['cliente', 'sacado', 'razao social', 'razão social', 'nome cliente', 'nome', 'cliente / sacado'],
+    cliente: ['cliente', 'sacado', 'razao social', 'razão social', 'nome cliente', 'nome'],
     data: ['data', 'emissao', 'emissão', 'data emissao', 'data emissão', 'competencia', 'competência'],
     vencimento: ['vencimento', 'dt vencimento', 'data vencimento', 'vcto', 'vence'],
     valor: ['valor', 'valor total', 'valor original', 'vlr', 'valor titulo', 'receber', 'total'],
     valorPago: ['valor pago', 'recebido', 'valor recebido', 'pago', 'vl pago', 'pagamento'],
-    saldo: ['saldo', 'valor em aberto', 'saldo atual', 'saldo titulo', 'saldo título'],
-    status: ['status', 'situacao', 'situação'],
-    documento: ['documento', 'titulo', 'título', 'nf', 'nota', 'numero', 'número', 'pedido']
+    saldo: ['saldo', 'valor em aberto', 'saldo atual'],
+    status: ['status', 'situacao', 'situação']
   };
+
+  let selectedFile = null;
 
   document.addEventListener('DOMContentLoaded', () => {
     if (document.body.dataset.page !== 'admin') return;
 
     const input = document.getElementById('fileInput');
+    const processButton = document.getElementById('processButton');
+
     if (input) {
       input.setAttribute('accept', VALID_EXTENSIONS.join(','));
       input.addEventListener('change', handleFileSelection);
     }
 
+    processButton?.addEventListener('click', processSelectedFile);
+
     const existingPayload = getFinanceData();
-    if (existingPayload) renderPayload(existingPayload);
+    if (existingPayload) {
+      renderPayload(existingPayload);
+    }
   });
 
-  async function handleFileSelection(event) {
+  function handleFileSelection(event) {
     const input = event.currentTarget;
-    const file = input?.files?.[0];
-    if (!file) return;
+    selectedFile = input?.files?.[0] || null;
+    setText('selectedFileLabel', selectedFile ? selectedFile.name : 'Nenhum arquivo selecionado');
+    setMessage(selectedFile ? 'Arquivo selecionado. Clique em Processar para continuar.' : 'Aguardando seleção de arquivo.', 'idle');
+  }
 
-    const extension = `.${String(file.name.split('.').pop() || '').toLowerCase()}`;
-    if (!VALID_EXTENSIONS.includes(extension)) {
-      setMessage('Formato inválido. Envie .xlsx, .xls, .xlsm, .xlsb ou .csv.', 'error');
-      input.value = '';
+  async function processSelectedFile() {
+    if (!selectedFile) {
+      setMessage('Selecione um arquivo antes de processar.', 'error');
       return;
     }
 
-    setMessage('Lendo arquivo e preparando os dados para o dashboard...', 'loading');
+    const extension = `.${String(selectedFile.name.split('.').pop() || '').toLowerCase()}`;
+    if (!VALID_EXTENSIONS.includes(extension)) {
+      setMessage('Formato inválido. Envie .xlsx, .xls, .xlsm, .xlsb ou .csv.', 'error');
+      return;
+    }
+
+    setMessage('Processando arquivo, aguarde...', 'loading');
 
     try {
-      const rows = extension === '.csv' ? await parseCsv(file) : await parseExcel(file);
-      const result = transformRows(rows);
+      const rows = extension === '.csv' ? await parseCsv(selectedFile) : await parseExcel(selectedFile);
+      const records = transformRows(rows);
       const updatedAt = new Date().toISOString();
       const payload = {
-        fileName: file.name,
+        fileName: selectedFile.name,
         updatedAt,
         sourceType: extension === '.csv' ? 'CSV' : 'Excel',
-        columnMap: result.columnMap,
-        records: result.records,
-        summary: calculateSummary(result.records)
+        records,
+        summary: calculateSummary(records)
       };
 
-      localStorage.setItem(STORAGE_KEYS.rawBase, JSON.stringify(result.rawRecords));
-      localStorage.setItem(STORAGE_KEYS.updatedAt, updatedAt);
       saveFinanceData(payload);
+      localStorage.setItem('financeData', JSON.stringify(payload));
+      localStorage.setItem(STORAGE_KEYS.legacyBase, JSON.stringify(records));
+      localStorage.setItem(STORAGE_KEYS.legacyUpdatedAt, updatedAt);
       renderPayload(payload);
-      setMessage(`✔ ${file.name} processado com sucesso. ${result.records.length} registros disponíveis.`, 'success');
+      setMessage(`✔ ${selectedFile.name} processado com sucesso. Redirecionando para o dashboard...`, 'success');
+      setTimeout(() => {
+        window.location.href = 'dashboard.html';
+      }, 700);
     } catch (error) {
       console.error(error);
       setMessage(error.message || 'Não foi possível processar o arquivo selecionado.', 'error');
-    } finally {
-      input.value = '';
     }
   }
 
@@ -102,102 +117,39 @@
 
   async function parseCsv(file) {
     const text = await file.text();
-    const lines = text.split(/\r?\n/).filter((line) => line.trim());
-    if (!lines.length) {
+    const workbook = XLSX.read(text, { type: 'string', raw: false });
+    const firstSheet = workbook.SheetNames[0];
+
+    if (!firstSheet) {
       throw new Error('O CSV informado está vazio.');
     }
 
-    const delimiter = detectDelimiter(lines[0]);
-    return lines.map((line) => splitDelimitedLine(line, delimiter));
-  }
-
-  function detectDelimiter(firstLine) {
-    const candidates = [';', ',', '\t'];
-    return candidates
-      .map((delimiter) => ({ delimiter, count: firstLine.split(delimiter).length }))
-      .sort((a, b) => b.count - a.count)[0].delimiter;
-  }
-
-  function splitDelimitedLine(line, delimiter) {
-    const cells = [];
-    let current = '';
-    let insideQuotes = false;
-
-    for (let index = 0; index < line.length; index += 1) {
-      const character = line[index];
-      if (character === '"') {
-        const nextCharacter = line[index + 1];
-        if (insideQuotes && nextCharacter === '"') {
-          current += '"';
-          index += 1;
-        } else {
-          insideQuotes = !insideQuotes;
-        }
-        continue;
-      }
-
-      if (character === delimiter && !insideQuotes) {
-        cells.push(current.trim());
-        current = '';
-        continue;
-      }
-
-      current += character;
-    }
-
-    cells.push(current.trim());
-    return cells;
+    return XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], {
+      header: 1,
+      raw: false,
+      defval: '',
+      blankrows: false
+    });
   }
 
   function transformRows(rows) {
-    const normalizedRows = (rows || []).filter((row) => Array.isArray(row) && row.some((cell) => String(cell || '').trim() !== ''));
-    if (!normalizedRows.length) {
+    const validRows = (rows || []).filter((row) => Array.isArray(row) && row.some((cell) => String(cell || '').trim() !== ''));
+    if (!validRows.length) {
       throw new Error('Nenhuma linha válida foi encontrada no arquivo.');
     }
 
-    const headerRowIndex = detectHeaderRow(normalizedRows);
-    const headerRow = normalizedRows[headerRowIndex].map((cell) => String(cell || '').trim());
-    const columnMap = mapColumns(headerRow);
-    const dataRows = normalizedRows.slice(headerRowIndex + 1);
-
-    const rawRecords = [];
-    const records = [];
-
-    dataRows.forEach((row) => {
-      const record = normalizeRecord(row, columnMap);
-      if (!record) return;
-      rawRecords.push(record.raw);
-      records.push(record.normalized);
-    });
+    const headers = validRows[0].map((cell) => String(cell || '').trim());
+    const columnMap = mapColumns(headers);
+    const records = validRows
+      .slice(1)
+      .map((row) => normalizeRecord(row, columnMap))
+      .filter(Boolean);
 
     if (!records.length) {
-      throw new Error('Os dados foram lidos, mas nenhuma linha válida foi identificada para processamento.');
+      throw new Error('Os dados foram lidos, mas nenhum registro válido foi encontrado.');
     }
 
-    return { records, rawRecords, columnMap };
-  }
-
-  function detectHeaderRow(rows) {
-    const limit = Math.min(rows.length, 10);
-    let bestIndex = 0;
-    let bestScore = -1;
-
-    for (let index = 0; index < limit; index += 1) {
-      const row = rows[index];
-      const score = row.reduce((total, cell) => {
-        const normalizedCell = normalizeText(cell);
-        if (!normalizedCell) return total;
-        const matched = Object.values(COLUMN_ALIASES).some((aliases) => aliases.some((alias) => normalizedCell.includes(normalizeText(alias))));
-        return total + (matched ? 1 : 0);
-      }, 0);
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestIndex = index;
-      }
-    }
-
-    return bestIndex;
+    return records;
   }
 
   function mapColumns(headers) {
@@ -216,7 +168,6 @@
 
   function normalizeRecord(row, columnMap) {
     const getValue = (key) => (columnMap[key] !== undefined ? row[columnMap[key]] : '');
-
     const cliente = String(getValue('cliente') || '').trim();
     const data = parseDate(getValue('data'));
     const vencimento = parseDate(getValue('vencimento'));
@@ -224,52 +175,34 @@
     const valorPago = parseBrazilianNumber(getValue('valorPago'));
     const saldoInformado = parseBrazilianNumber(getValue('saldo'));
     const saldo = columnMap.saldo !== undefined ? saldoInformado : Number((valor - valorPago).toFixed(2));
-    const documento = String(getValue('documento') || '').trim();
-    const status = calculateStatus({ saldo, vencimento, statusOriginal: getValue('status') });
 
-    const hasMeaningfulData = cliente || valor || valorPago || saldo || vencimento || documento;
-    if (!hasMeaningfulData) return null;
+    if (!cliente && !valor && !valorPago && !vencimento) {
+      return null;
+    }
 
-    const raw = {
+    const status = resolveStatus(saldo, vencimento);
+
+    return {
       cliente: cliente || 'Sem cliente',
       data: data ? data.toISOString() : '',
       vencimento: vencimento ? vencimento.toISOString() : '',
       valor,
       valorPago,
       saldo,
-      status
-    };
-
-    return {
-      raw,
-      normalized: {
-        cliente: raw.cliente,
-        data: raw.data,
-        vencimento: raw.vencimento,
-        valor: raw.valor,
-        valorPago: raw.valorPago,
-        saldo: raw.saldo,
-        status: raw.status,
-        client: raw.cliente,
-        issueDate: raw.data,
-        dueDate: raw.vencimento,
-        amount: raw.valor,
-        paidAmount: raw.valorPago,
-        saldo: raw.saldo,
-        status: raw.status,
-        document: documento,
-        rawStatus: String(getValue('status') || '').trim()
-      }
+      status,
+      client: cliente || 'Sem cliente',
+      issueDate: data ? data.toISOString() : '',
+      dueDate: vencimento ? vencimento.toISOString() : '',
+      amount: valor,
+      paidAmount: valorPago
     };
   }
 
-  function calculateStatus({ saldo, vencimento, statusOriginal }) {
+  function resolveStatus(saldo, vencimento) {
     const today = startOfDay(new Date());
     const dueDate = vencimento ? startOfDay(vencimento) : null;
-    const original = normalizeText(statusOriginal);
 
     if (saldo <= 0) return 'Quitado';
-    if (original.includes('quit') || original.includes('pago') || original.includes('receb')) return 'Quitado';
     if (!dueDate) return 'A vencer';
     if (dueDate.getTime() === today.getTime()) return 'Vence hoje';
     if (dueDate < today) return 'Vencido';
@@ -277,28 +210,28 @@
   }
 
   function startOfDay(date) {
-    const normalized = new Date(date);
-    normalized.setHours(0, 0, 0, 0);
-    return normalized;
+    const current = new Date(date);
+    current.setHours(0, 0, 0, 0);
+    return current;
   }
 
   function renderPayload(payload) {
-    const metadataList = document.getElementById('metadataList');
     const previewTableBody = document.getElementById('previewTableBody');
+    const metadataList = document.getElementById('metadataList');
     const summary = payload.summary || calculateSummary(payload.records || []);
 
-    setText('lastFileHint', payload.fileName || 'Última carga');
     setText('fileNameValue', payload.fileName || '-');
     setText('recordsValue', String(payload.records?.length || 0));
     setText('updatedAtValue', formatDateTimeBR(payload.updatedAt));
+    setText('selectedFileLabel', payload.fileName || 'Nenhum arquivo selecionado');
 
     if (metadataList) {
-      const mappedColumns = Object.keys(payload.columnMap || {}).join(', ') || 'Nenhuma coluna reconhecida';
       metadataList.innerHTML = `
         <div><dt>Origem</dt><dd>${escapeHtml(payload.sourceType || '-')}</dd></div>
         <div><dt>Atualização</dt><dd>${formatDateTimeBR(payload.updatedAt)}</dd></div>
-        <div><dt>Colunas mapeadas</dt><dd>${escapeHtml(mappedColumns)}</dd></div>
-        <div><dt>Total a receber</dt><dd>${formatCurrency(summary.totalReceber)}</dd></div>
+        <div><dt>Total de registros</dt><dd>${payload.records?.length || 0}</dd></div>
+        <div><dt>Total de valores</dt><dd>${formatCurrency((payload.records || []).reduce((total, item) => total + Number(item.valor || 0), 0))}</dd></div>
+        <div><dt>Total em aberto</dt><dd>${formatCurrency(summary.totalReceber)}</dd></div>
       `;
     }
 
@@ -306,9 +239,9 @@
       const previewRows = (payload.records || []).slice(0, 6).map(
         (record) => `
           <tr>
-            <td>${escapeHtml(record.client || record.cliente)}</td>
-            <td>${formatDateBR(record.dueDate || record.vencimento)}</td>
-            <td>${formatCurrency(record.amount ?? record.valor)}</td>
+            <td>${escapeHtml(record.cliente)}</td>
+            <td>${formatDateBR(record.vencimento)}</td>
+            <td>${formatCurrency(record.valor)}</td>
             <td>${formatCurrency(record.saldo)}</td>
             <td>${renderStatus(record.status)}</td>
           </tr>
