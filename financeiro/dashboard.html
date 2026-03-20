@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Financeiro | Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css?v=20260320-1" />
+  </head>
+  <body data-page="dashboard">
+    <main class="page page-shell">
+      <header class="topbar premium-card">
+        <div class="brand-block">
+          <img class="brand-logo" src="logo.png" alt="Logo Areia Ana | Flux" />
+          <div>
+            <span class="eyebrow">Dashboard executivo</span>
+            <h1>Visão de Caixa</h1>
+            <p>Indicadores financeiros, inadimplência e agenda de recebimentos em um único painel.</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <div class="session-badge">
+            <span>Perfil</span>
+            <strong id="dashboardRole">usuario</strong>
+          </div>
+          <a class="btn btn-secondary" href="admin.html">Admin</a>
+          <button class="btn btn-ghost" id="logoutButton" type="button">Sair</button>
+        </div>
+      </header>
+
+      <section class="premium-card hero-card dashboard-hero">
+        <div>
+          <span class="eyebrow">Performance financeira</span>
+          <h2>Monitoramento premium para tomada de decisão</h2>
+          <p>
+            Acompanhe recebíveis, atraso, fluxo futuro e o faturamento consolidado a partir da última planilha
+            processada pelo admin.
+          </p>
+        </div>
+        <div class="hero-meta">
+          <div>
+            <span>Última atualização</span>
+            <strong id="dashboardUpdatedAt">-</strong>
+          </div>
+          <div>
+            <span>Arquivo</span>
+            <strong id="dashboardFileName">-</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats-grid dashboard-stats">
+        <article class="stat-card accent">
+          <span>Total a receber</span>
+          <strong id="totalReceber">R$ 0,00</strong>
+        </article>
+        <article class="stat-card">
+          <span>Total vencido</span>
+          <strong id="totalVencido">R$ 0,00</strong>
+        </article>
+        <article class="stat-card">
+          <span>Total a vencer</span>
+          <strong id="totalAVencer">R$ 0,00</strong>
+        </article>
+        <article class="stat-card">
+          <span>Faturamento do mês</span>
+          <strong id="faturamentoMes">R$ 0,00</strong>
+        </article>
+        <article class="stat-card">
+          <span>Faturamento do ano</span>
+          <strong id="faturamentoAno">R$ 0,00</strong>
+        </article>
+      </section>
+
+      <section class="grid-two-columns detail-grid">
+        <article class="premium-card">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Inadimplência</span>
+              <h2>Clientes com maior saldo vencido</h2>
+            </div>
+          </div>
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Qtd. títulos</th>
+                  <th>Saldo vencido</th>
+                </tr>
+              </thead>
+              <tbody id="lateClientsTable"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="premium-card">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Agenda</span>
+              <h2>Contas a vencer</h2>
+            </div>
+          </div>
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Vencimento</th>
+                  <th>Saldo</th>
+                </tr>
+              </thead>
+              <tbody id="upcomingTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="premium-card">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Visão detalhada</span>
+            <h2>Recebíveis processados</h2>
+          </div>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Documento</th>
+                <th>Vencimento</th>
+                <th>Valor</th>
+                <th>Saldo</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="detailsTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="utils.js?v=20260320-1"></script>
+    <script src="app.js?v=20260320-1"></script>
+  </body>
+</html>
