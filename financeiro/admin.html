@@ -1,54 +1,111 @@
 <!DOCTYPE html>
-<html>
-<head>
-<title>Admin</title>
-</head>
-<body style="background:#050814;color:white;font-family:Arial">
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Financeiro | Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body data-page="admin">
+    <main class="page page-login admin-page">
+      <section class="premium-card admin-card centered-panel">
+        <header class="panel-header">
+          <img class="logo brand-logo" src="logo.png" alt="Logo Areia Ana | Flux" />
+          <span class="eyebrow">Administração financeira</span>
+          <h1>Upload de Planilha</h1>
+          <p class="page-description">
+            Selecione uma planilha Excel ou CSV, processe os dados e publique automaticamente a base para o dashboard.
+          </p>
+        </header>
 
-<h2>Upload de Planilha</h2>
+        <div class="upload-section">
+          <label class="upload-dropzone" for="fileInput">
+            <input id="fileInput" type="file" accept=".xlsx,.xls,.xlsm,.xlsb,.csv" />
+            <span class="upload-icon">⬆</span>
+            <strong>Selecionar arquivo</strong>
+            <small id="selectedFileLabel">Nenhum arquivo selecionado</small>
+          </label>
 
-<input type="file" id="file" accept=".xlsx,.xls,.xlsm,.xlsb,.csv">
-<br><br>
+          <div class="upload-actions">
+            <button class="btn btn-primary" id="processButton" type="button">Processar</button>
+            <a class="btn btn-secondary" href="dashboard.html">Ver dashboard</a>
+            <button class="btn btn-ghost" id="logoutButton" type="button">Sair</button>
+          </div>
 
-<button onclick="upload()">Processar</button>
+          <div id="processingMessage" class="status-banner is-idle" aria-live="polite">
+            Aguardando seleção de arquivo para iniciar o processamento.
+          </div>
 
-<p id="msg"></p>
+          <div class="stats-grid compact-grid">
+            <article class="stat-card">
+              <span>Arquivo</span>
+              <strong id="fileNameValue">-</strong>
+            </article>
+            <article class="stat-card">
+              <span>Registros processados</span>
+              <strong id="recordsValue">0</strong>
+            </article>
+            <article class="stat-card">
+              <span>Atualizado em</span>
+              <strong id="updatedAtValue">-</strong>
+            </article>
+          </div>
+        </div>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+        <section class="admin-content-grid">
+          <article class="premium-card inner-card">
+            <div class="section-heading compact-heading">
+              <div>
+                <span class="eyebrow">Resumo</span>
+                <h2>Metadados da última carga</h2>
+              </div>
+            </div>
+            <dl class="data-list" id="metadataList">
+              <div><dt>Origem</dt><dd>Sem carga processada.</dd></div>
+              <div><dt>Atualização</dt><dd>-</dd></div>
+              <div><dt>Colunas mapeadas</dt><dd>-</dd></div>
+            </dl>
+          </article>
 
-<script>
-function upload() {
-    const file = document.getElementById("file").files[0];
-    if (!file) return alert("Selecione um arquivo");
+          <article class="premium-card inner-card">
+            <div class="section-heading compact-heading">
+              <div>
+                <span class="eyebrow">Prévia</span>
+                <h2>Amostra processada</h2>
+              </div>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Vencimento</th>
+                    <th>Valor</th>
+                    <th>Saldo</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="previewTableBody">
+                  <tr>
+                    <td colspan="5" class="empty-state-cell">A prévia será exibida após o processamento.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </section>
+    </main>
 
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        const wb = XLSX.read(data, { type: "array" });
-
-        let sheet;
-
-        if (file.name.endsWith(".csv")) {
-            sheet = wb.Sheets[wb.SheetNames[0]];
-        } else {
-            if (!wb.Sheets["Cálculos de Projeção"]) {
-                document.getElementById("msg").innerText = "Aba não encontrada";
-                return;
-            }
-            sheet = wb.Sheets["Cálculos de Projeção"];
-        }
-
-        const json = XLSX.utils.sheet_to_json(sheet);
-
-        localStorage.setItem("dados", JSON.stringify(json));
-
-        document.getElementById("msg").innerText = "Arquivo carregado!";
-    };
-
-    reader.readAsArrayBuffer(file);
-}
-</script>
-
-</body>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="utils.js"></script>
+    <script src="app.js"></script>
+    <script src="admin.js"></script>
+  </body>
 </html>
