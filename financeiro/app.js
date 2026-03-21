@@ -7,7 +7,8 @@
     formatCurrency,
     formatDateBR,
     formatDateTimeBR,
-    escapeHtml
+    escapeHtml,
+    normalizeText
   } = window.FinanceiroUtils;
 
   const CREDENTIALS = {
@@ -69,8 +70,8 @@
     setText('dashboardUpdatedAt', `Atualizado em ${formatDateTimeBR(payload.updatedAt)}`);
 
     renderProjecoes(payload.tables.tb_projecoes || []);
-    renderReceber(payload.tables.tb_a_receber || []);
-    renderInadimplentes(payload.tables.tb_inadimplentes || []);
+    setupReceber(payload.tables.tb_a_receber || []);
+    setupInadimplentes(payload.tables.tb_inadimplentes || []);
   }
 
   function renderProjecoes(rows) {
@@ -83,31 +84,82 @@
     setText('projTotalRealizado', formatCurrency(totalRealizado));
     setText('projTotalRegistros', String(rows.length));
 
-    const chartData = aggregateBy(rows, 'unidade', 'faturamento_projetado');
-    renderChart('projecoesChart', chartData, formatCurrency);
-    renderTable('projecoesTableBody', rows.slice(0, 12), ['periodo', 'unidade', 'volume_projetado', 'faturamento_realizado', 'faturamento_projetado']);
+    renderChart('projComparativoChart', [
+      { label: 'Realizado', value: totalRealizado },
+      { label: 'Projetado', value: totalProjetado }
+    ], formatCurrency);
+    renderChart('projFaturamentoChart', aggregateBy(rows, 'unidade', 'faturamento_projetado'), formatCurrency);
+    renderChart('projVolumeChart', aggregateBy(rows, 'unidade', 'volume_projetado'), formatNumber);
+    renderTable('projecoesTableBody', rows.slice(0, 16), ['periodo', 'unidade', 'unidade_medida', 'volume_realizado', 'volume_medio', 'volume_projetado', 'faturamento_realizado', 'faturamento_medio', 'faturamento_projetado']);
+  }
+
+  function setupReceber(rows) {
+    bindFilteredSection({
+      rows,
+      clienteSelectId: 'receberClienteFilter',
+      portadorSelectId: 'receberPortadorFilter',
+      textInputId: 'receberTextoFilter',
+      onRender: renderReceber
+    });
+  }
+
+  function setupInadimplentes(rows) {
+    bindFilteredSection({
+      rows,
+      clienteSelectId: 'inadClienteFilter',
+      portadorSelectId: 'inadPortadorFilter',
+      textInputId: 'inadTextoFilter',
+      onRender: renderInadimplentes
+    });
+  }
+
+  function bindFilteredSection({ rows, clienteSelectId, portadorSelectId, textInputId, onRender }) {
+    const clienteSelect = document.getElementById(clienteSelectId);
+    const portadorSelect = document.getElementById(portadorSelectId);
+    const textInput = document.getElementById(textInputId);
+
+    fillSelect(clienteSelect, uniqueValues(rows, 'cliente'));
+    fillSelect(portadorSelect, uniqueValues(rows, 'portador'));
+
+    const render = () => {
+      const filtered = rows.filter((row) => {
+        const clienteOk = !clienteSelect?.value || row.cliente === clienteSelect.value;
+        const portadorOk = !portadorSelect?.value || row.portador === portadorSelect.value;
+        const search = normalizeText(textInput?.value || '');
+        const textOk = !search || normalizeText(`${row.cliente} ${row.documento}`).includes(search);
+        return clienteOk && portadorOk && textOk;
+      });
+      onRender(filtered);
+    };
+
+    clienteSelect?.addEventListener('change', render);
+    portadorSelect?.addEventListener('change', render);
+    textInput?.addEventListener('input', render);
+    render();
   }
 
   function renderReceber(rows) {
+    setText('receberTotalClientes', String(uniqueValues(rows, 'cliente').length));
+    setText('receberTotalPortadores', String(uniqueValues(rows, 'portador').length));
     setText('receberTotalValor', formatCurrency(sum(rows, 'saldo')));
     setText('receberTotalTitulos', String(rows.length));
-    setText('receberUrgentes', String(rows.filter((row) => row.classificacao_vencimento === 'urgente').length));
-    setText('receberProximos', String(rows.filter((row) => row.dias_para_vencer <= 7).length));
 
-    const chartData = aggregateBy(rows, 'classificacao_vencimento', 'saldo');
-    renderChart('receberChart', chartData, formatCurrency);
-    renderTable('receberTableBody', rows.slice(0, 15), ['cliente', 'vencimento', 'saldo', 'dias_para_vencer', 'classificacao_vencimento']);
+    renderChart('receberFaixaChart', aggregateBy(rows, 'classificacao_vencimento', 'saldo'), formatCurrency);
+    renderChart('receberClienteChart', aggregateBy(rows, 'cliente', 'saldo').slice(0, 8), formatCurrency);
+    renderChart('receberPortadorChart', aggregateBy(rows, 'portador', 'saldo'), formatCurrency);
+    renderTable('receberTableBody', rows.slice(0, 20), ['cliente', 'portador', 'documento', 'vencimento', 'saldo', 'dias_para_vencer', 'classificacao_vencimento']);
   }
 
   function renderInadimplentes(rows) {
+    setText('inadTotalClientes', String(uniqueValues(rows, 'cliente').length));
+    setText('inadTotalPortadores', String(uniqueValues(rows, 'portador').length));
     setText('inadTotalValor', formatCurrency(sum(rows, 'saldo')));
     setText('inadTotalTitulos', String(rows.length));
-    setText('inadTotalClientes', String(new Set(rows.map((row) => row.cliente)).size));
-    setText('inadCriticos', String(rows.filter((row) => row.faixa_atraso === 'crítico').length));
 
-    const chartData = aggregateBy(rows, 'faixa_atraso', 'saldo');
-    renderChart('inadChart', chartData, formatCurrency);
-    renderTable('inadTableBody', rows.slice(0, 15), ['cliente', 'vencimento', 'saldo', 'dias_em_atraso', 'faixa_atraso']);
+    renderChart('inadFaixaChart', aggregateBy(rows, 'faixa_atraso', 'saldo'), formatCurrency);
+    renderChart('inadClienteChart', aggregateBy(rows, 'cliente', 'saldo').slice(0, 8), formatCurrency);
+    renderChart('inadPortadorChart', aggregateBy(rows, 'portador', 'saldo'), formatCurrency);
+    renderTable('inadTableBody', rows.slice(0, 20), ['cliente', 'portador', 'documento', 'vencimento', 'saldo', 'dias_em_atraso', 'faixa_atraso']);
   }
 
   function renderChart(containerId, data, formatter) {
@@ -135,11 +187,7 @@
     const target = document.getElementById(targetId);
     if (!target) return;
     target.innerHTML = rows.length
-      ? rows
-          .map(
-            (row) => `<tr>${columns.map((column) => `<td>${escapeHtml(formatValue(row[column]))}</td>`).join('')}</tr>`
-          )
-          .join('')
+      ? rows.map((row) => `<tr>${columns.map((column) => `<td>${escapeHtml(formatValue(row[column]))}</td>`).join('')}</tr>`).join('')
       : `<tr><td colspan="${columns.length}" class="empty-state-cell">Sem dados disponíveis.</td></tr>`;
   }
 
@@ -161,12 +209,10 @@
       window.location.replace('index.html');
       return null;
     }
-
     if (requiredRole === 'admin' && session.role !== 'admin') {
       window.location.replace('dashboard.html');
       return null;
     }
-
     return session;
   }
 
@@ -178,12 +224,20 @@
     });
   }
 
+  function fillSelect(select, values) {
+    if (!select) return;
+    select.innerHTML = `<option value="">Todos</option>${values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('')}`;
+  }
+
+  function uniqueValues(rows, field) {
+    return [...new Set(rows.map((row) => row[field]).filter(Boolean))].sort();
+  }
+
   function aggregateBy(rows, field, valueField) {
     const bucket = new Map();
     rows.forEach((row) => {
       const label = row[field] || 'Sem grupo';
-      const current = bucket.get(label) || 0;
-      bucket.set(label, current + Number(row[valueField] || 0));
+      bucket.set(label, (bucket.get(label) || 0) + Number(row[valueField] || 0));
     });
     return [...bucket.entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
   }
@@ -196,6 +250,10 @@
     if (typeof value === 'number') return value.toLocaleString('pt-BR');
     if (String(value).includes('T') && !Number.isNaN(Date.parse(value))) return formatDateBR(value);
     return value ?? '-';
+  }
+
+  function formatNumber(value) {
+    return Number(value || 0).toLocaleString('pt-BR');
   }
 
   function setText(id, value) {
