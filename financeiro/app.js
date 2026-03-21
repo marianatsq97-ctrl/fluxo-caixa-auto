@@ -7,8 +7,7 @@
     formatCurrency,
     formatDateBR,
     formatDateTimeBR,
-    escapeHtml,
-    normalizeText
+    escapeHtml
   } = window.FinanceiroUtils;
   const chartRegistry = new Map();
 
@@ -70,12 +69,42 @@
     emptyState?.classList.remove('is-visible');
     setText('dashboardUpdatedAt', `Atualizado em ${formatDateTimeBR(payload.updatedAt)}`);
 
-    renderProjecoes(payload.tables.tb_projecoes || []);
+    setupProjecoes(payload.tables.tb_projecoes || []);
     setupReceber(payload.tables.tb_a_receber || []);
     setupInadimplentes(payload.tables.tb_inadimplentes || []);
   }
 
-  function renderProjecoes(rows) {
+  function setupProjecoes(rows) {
+    const viewSelect = document.getElementById('projViewFilter');
+    const monthSelect = document.getElementById('projMonthFilter');
+    const yearSelect = document.getElementById('projYearFilter');
+    const periods = rows.map((row) => parsePeriodParts(row.periodo)).filter(Boolean);
+
+    fillSelect(viewSelect, [
+      { value: 'periodo', label: 'Por período' },
+      { value: 'unidade', label: 'Por unidade' }
+    ], 'Todas');
+    fillSelect(monthSelect, uniqueOptionValues(periods.map((item) => ({ value: String(item.month).padStart(2, '0'), label: item.monthLabel }))), 'Todos');
+    fillSelect(yearSelect, uniqueOptionValues(periods.map((item) => ({ value: String(item.year), label: String(item.year) }))), 'Todos');
+
+    const render = () => {
+      const filteredRows = rows.filter((row) => {
+        const period = parsePeriodParts(row.periodo);
+        if (!period) return !monthSelect?.value && !yearSelect?.value;
+        const monthOk = !monthSelect?.value || String(period.month).padStart(2, '0') === monthSelect.value;
+        const yearOk = !yearSelect?.value || String(period.year) === yearSelect.value;
+        return monthOk && yearOk;
+      });
+      renderProjecoes(filteredRows, viewSelect?.value || 'periodo');
+    };
+
+    viewSelect?.addEventListener('change', render);
+    monthSelect?.addEventListener('change', render);
+    yearSelect?.addEventListener('change', render);
+    render();
+  }
+
+  function renderProjecoes(rows, viewMode = 'periodo') {
     const summary = summarizeProjecoes(rows);
 
     setText('projTotalFaturado', formatCurrency(summary.totalFaturado));
@@ -83,76 +112,117 @@
     setText('projTotalRealizado', formatCurrency(summary.totalRealizado));
     setText('projTotalRegistros', String(rows.length));
 
-    renderProjectionCharts(summary);
+    renderProjectionCharts(summary, viewMode);
     renderProjectionTable(summary.byUnit);
   }
 
   function setupReceber(rows) {
-    bindFilteredSection({
-      rows,
-      clienteSelectId: 'receberClienteFilter',
-      portadorSelectId: 'receberPortadorFilter',
-      textInputId: 'receberTextoFilter',
-      onRender: renderReceber
-    });
-  }
+    const clienteSelect = document.getElementById('receberClienteFilter');
+    const portadorSelect = document.getElementById('receberPortadorFilter');
+    const classificacaoSelect = document.getElementById('receberClassificacaoFilter');
+    const vencimentoInput = document.getElementById('receberVencimentoFilter');
 
-  function setupInadimplentes(rows) {
-    bindFilteredSection({
-      rows,
-      clienteSelectId: 'inadClienteFilter',
-      portadorSelectId: 'inadPortadorFilter',
-      textInputId: 'inadTextoFilter',
-      onRender: renderInadimplentes
-    });
-  }
-
-  function bindFilteredSection({ rows, clienteSelectId, portadorSelectId, textInputId, onRender }) {
-    const clienteSelect = document.getElementById(clienteSelectId);
-    const portadorSelect = document.getElementById(portadorSelectId);
-    const textInput = document.getElementById(textInputId);
-
-    fillSelect(clienteSelect, uniqueValues(rows, 'cliente'));
-    fillSelect(portadorSelect, uniqueValues(rows, 'portador'));
+    fillSelect(clienteSelect, uniqueValues(rows, 'cliente'), 'Todos');
+    fillSelect(portadorSelect, uniqueValues(rows, 'portador'), 'Todos');
+    fillSelect(classificacaoSelect, uniqueValues(rows, 'classificacao_vencimento'), 'Todas');
 
     const render = () => {
       const filtered = rows.filter((row) => {
         const clienteOk = !clienteSelect?.value || row.cliente === clienteSelect.value;
         const portadorOk = !portadorSelect?.value || row.portador === portadorSelect.value;
-        const search = normalizeText(textInput?.value || '');
-        const textOk = !search || normalizeText(`${row.cliente} ${row.documento}`).includes(search);
-        return clienteOk && portadorOk && textOk;
+        const classificacaoOk = !classificacaoSelect?.value || row.classificacao_vencimento === classificacaoSelect.value;
+        const vencimentoOk = !vencimentoInput?.value || extractMonthToken(row.vencimento) === vencimentoInput.value;
+        return clienteOk && portadorOk && classificacaoOk && vencimentoOk;
       });
-      onRender(filtered);
+      renderReceber(filtered);
     };
 
     clienteSelect?.addEventListener('change', render);
     portadorSelect?.addEventListener('change', render);
-    textInput?.addEventListener('input', render);
+    classificacaoSelect?.addEventListener('change', render);
+    vencimentoInput?.addEventListener('input', render);
+    render();
+  }
+
+  function setupInadimplentes(rows) {
+    const clienteSelect = document.getElementById('inadClienteFilter');
+    const portadorSelect = document.getElementById('inadPortadorFilter');
+    const faixaSelect = document.getElementById('inadFaixaFilter');
+    const vencimentoInput = document.getElementById('inadVencimentoFilter');
+
+    fillSelect(clienteSelect, uniqueValues(rows, 'cliente'), 'Todos');
+    fillSelect(portadorSelect, uniqueValues(rows, 'portador'), 'Todos');
+    fillSelect(faixaSelect, uniqueValues(rows, 'faixa_atraso'), 'Todas');
+
+    const render = () => {
+      const filtered = rows.filter((row) => {
+        const clienteOk = !clienteSelect?.value || row.cliente === clienteSelect.value;
+        const portadorOk = !portadorSelect?.value || row.portador === portadorSelect.value;
+        const faixaOk = !faixaSelect?.value || row.faixa_atraso === faixaSelect.value;
+        const vencimentoOk = !vencimentoInput?.value || extractMonthToken(row.vencimento) === vencimentoInput.value;
+        return clienteOk && portadorOk && faixaOk && vencimentoOk;
+      });
+      renderInadimplentes(filtered);
+    };
+
+    clienteSelect?.addEventListener('change', render);
+    portadorSelect?.addEventListener('change', render);
+    faixaSelect?.addEventListener('change', render);
+    vencimentoInput?.addEventListener('input', render);
     render();
   }
 
   function renderReceber(rows) {
+    setText('receberTotalValor', formatCurrency(sum(rows, 'saldo')));
     setText('receberTotalClientes', String(uniqueValues(rows, 'cliente').length));
     setText('receberTotalPortadores', String(uniqueValues(rows, 'portador').length));
-    setText('receberTotalValor', formatCurrency(sum(rows, 'saldo')));
     setText('receberTotalTitulos', String(rows.length));
 
-    renderChart('receberFaixaChart', aggregateBy(rows, 'classificacao_vencimento', 'saldo'), formatCurrency);
-    renderChart('receberClienteChart', aggregateBy(rows, 'cliente', 'saldo').slice(0, 8), formatCurrency);
-    renderChart('receberPortadorChart', aggregateBy(rows, 'portador', 'saldo'), formatCurrency);
+    renderMetricBarChart('receberFaixaChart', aggregateBy(rows, 'classificacao_vencimento', 'saldo'), {
+      datasetLabel: 'Saldo',
+      xTitle: 'Classificação',
+      yTitle: 'Saldo financeiro',
+      format: 'currency'
+    });
+    renderMetricBarChart('receberClienteChart', aggregateBy(rows, 'cliente', 'saldo').slice(0, 8), {
+      datasetLabel: 'Saldo',
+      xTitle: 'Cliente',
+      yTitle: 'Saldo financeiro',
+      format: 'currency'
+    });
+    renderMetricBarChart('receberPortadorChart', aggregateBy(rows, 'portador', 'saldo'), {
+      datasetLabel: 'Saldo',
+      xTitle: 'Portador',
+      yTitle: 'Saldo financeiro',
+      format: 'currency'
+    });
     renderTable('receberTableBody', rows.slice(0, 20), ['cliente', 'portador', 'documento', 'vencimento', 'saldo', 'dias_para_vencer', 'classificacao_vencimento']);
   }
 
   function renderInadimplentes(rows) {
+    setText('inadTotalValor', formatCurrency(sum(rows, 'saldo')));
     setText('inadTotalClientes', String(uniqueValues(rows, 'cliente').length));
     setText('inadTotalPortadores', String(uniqueValues(rows, 'portador').length));
-    setText('inadTotalValor', formatCurrency(sum(rows, 'saldo')));
     setText('inadTotalTitulos', String(rows.length));
 
-    renderChart('inadFaixaChart', aggregateBy(rows, 'faixa_atraso', 'saldo'), formatCurrency);
-    renderChart('inadClienteChart', aggregateBy(rows, 'cliente', 'saldo').slice(0, 8), formatCurrency);
-    renderChart('inadPortadorChart', aggregateBy(rows, 'portador', 'saldo'), formatCurrency);
+    renderMetricBarChart('inadFaixaChart', aggregateBy(rows, 'faixa_atraso', 'saldo'), {
+      datasetLabel: 'Saldo vencido',
+      xTitle: 'Faixa de atraso',
+      yTitle: 'Valor vencido',
+      format: 'currency'
+    });
+    renderMetricBarChart('inadClienteChart', aggregateBy(rows, 'cliente', 'saldo').slice(0, 8), {
+      datasetLabel: 'Saldo vencido',
+      xTitle: 'Cliente',
+      yTitle: 'Valor vencido',
+      format: 'currency'
+    });
+    renderMetricBarChart('inadPortadorChart', aggregateBy(rows, 'portador', 'saldo'), {
+      datasetLabel: 'Saldo vencido',
+      xTitle: 'Portador',
+      yTitle: 'Valor vencido',
+      format: 'currency'
+    });
     renderTable('inadTableBody', rows.slice(0, 20), ['cliente', 'portador', 'documento', 'vencimento', 'saldo', 'dias_em_atraso', 'faixa_atraso']);
   }
 
@@ -177,26 +247,40 @@
       : '<div class="empty-state-cell">Sem dados para gráfico.</div>';
   }
 
-  function renderProjectionCharts(summary) {
+  function renderProjectionCharts(summary, viewMode = 'periodo') {
     const chartApi = window.Chart;
+    const comparativeSeries = viewMode === 'unidade'
+      ? {
+          labels: summary.byUnit.map((row) => row.unidade),
+          realizado: summary.byUnit.map((row) => row.faturamento_realizado),
+          projetado: summary.byUnit.map((row) => row.faturamento_projetado),
+          xTitle: 'Unidade de negócio'
+        }
+      : {
+          labels: summary.byPeriod.map((row) => row.periodo),
+          realizado: summary.byPeriod.map((row) => row.faturamento_realizado),
+          projetado: summary.byPeriod.map((row) => row.faturamento_projetado),
+          xTitle: 'Período'
+        };
+
     if (!chartApi) {
       renderChart('projComparativoChart', [
         { label: 'Realizado', value: summary.totalRealizado },
         { label: 'Projetado', value: summary.totalProjetado }
       ], formatCurrency);
       renderChart('projFaturamentoChart', summary.byUnit.map((row) => ({ label: row.unidade, value: row.faturamento_projetado })), formatCurrency);
-      renderChart('projVolumeChart', summary.byPeriod.map((row) => ({ label: row.periodo, value: row.faturamento_projetado })), formatCurrency);
+      renderChart('projVolumeChart', summary.byUnit.map((row) => ({ label: row.unidade, value: row.volume_projetado })), formatNumber);
       return;
     }
 
     renderCanvasChart('projComparativoChart', {
       type: 'bar',
       data: {
-        labels: summary.byPeriod.map((row) => row.periodo),
+        labels: comparativeSeries.labels,
         datasets: [
           {
             label: 'Realizado',
-            data: summary.byPeriod.map((row) => row.faturamento_realizado),
+            data: comparativeSeries.realizado,
             backgroundColor: 'rgba(255, 122, 26, 0.82)',
             borderColor: 'rgba(255, 145, 69, 1)',
             borderWidth: 1.5,
@@ -206,7 +290,7 @@
           },
           {
             label: 'Projetado',
-            data: summary.byPeriod.map((row) => row.faturamento_projetado),
+            data: comparativeSeries.projetado,
             backgroundColor: 'rgba(99, 132, 255, 0.74)',
             borderColor: 'rgba(145, 168, 255, 1)',
             borderWidth: 1.5,
@@ -217,7 +301,7 @@
         ]
       },
       options: buildCurrencyChartOptions({
-        xTitle: 'Período',
+        xTitle: comparativeSeries.xTitle,
         yTitle: 'Valores financeiros',
         stacked: false
       })
@@ -256,39 +340,50 @@
     });
 
     renderCanvasChart('projVolumeChart', {
-      type: 'line',
+      type: 'bar',
       data: {
-        labels: summary.byPeriod.map((row) => row.periodo),
-        datasets: [
-          {
-            label: 'Faturamento médio',
-            data: summary.byPeriod.map((row) => row.faturamento_medio),
-            borderColor: 'rgba(255, 208, 123, 1)',
-            backgroundColor: 'rgba(255, 208, 123, 0.18)',
-            borderWidth: 3,
-            pointRadius: 4,
-            pointHoverRadius: 5,
-            pointBackgroundColor: 'rgba(255, 208, 123, 1)',
-            tension: 0.34,
-            fill: false
-          },
-          {
-            label: 'Faturamento projetado',
-            data: summary.byPeriod.map((row) => row.faturamento_projetado),
-            borderColor: 'rgba(99, 132, 255, 1)',
-            backgroundColor: 'rgba(99, 132, 255, 0.18)',
-            borderWidth: 3,
-            pointRadius: 4,
-            pointHoverRadius: 5,
-            pointBackgroundColor: 'rgba(99, 132, 255, 1)',
-            tension: 0.34,
-            fill: false
-          }
-        ]
+        labels: summary.byUnit.map((row) => row.unidade),
+        datasets: [{
+          label: 'Volume projetado',
+          data: summary.byUnit.map((row) => row.volume_projetado),
+          backgroundColor: 'rgba(255, 208, 123, 0.78)',
+          borderColor: 'rgba(255, 208, 123, 1)',
+          borderWidth: 1.5,
+          borderRadius: 10,
+          borderSkipped: false
+        }]
       },
-      options: buildCurrencyChartOptions({
-        xTitle: 'Período',
-        yTitle: 'Valores financeiros',
+      options: buildNumberChartOptions({
+        xTitle: 'Unidade de negócio',
+        yTitle: 'Volume',
+        stacked: false
+      })
+    });
+  }
+
+  function renderMetricBarChart(canvasId, data, { datasetLabel, xTitle, yTitle, format = 'currency' }) {
+    if (!window.Chart) {
+      renderChart(canvasId, data, format === 'currency' ? formatCurrency : formatNumber);
+      return;
+    }
+
+    renderCanvasChart(canvasId, {
+      type: 'bar',
+      data: {
+        labels: data.map((item) => item.label),
+        datasets: [{
+          label: datasetLabel,
+          data: data.map((item) => item.value),
+          backgroundColor: 'rgba(255, 122, 26, 0.78)',
+          borderColor: 'rgba(255, 145, 69, 1)',
+          borderWidth: 1.5,
+          borderRadius: 10,
+          borderSkipped: false
+        }]
+      },
+      options: (format === 'currency' ? buildCurrencyChartOptions : buildNumberChartOptions)({
+        xTitle,
+        yTitle,
         stacked: false
       })
     });
@@ -441,13 +536,28 @@
     });
   }
 
-  function fillSelect(select, values) {
+  function fillSelect(select, values, emptyLabel = 'Todos') {
     if (!select) return;
-    select.innerHTML = `<option value="">Todos</option>${values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('')}`;
+    const options = values.map((item) => {
+      if (typeof item === 'object') {
+        return `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`;
+      }
+      return `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`;
+    }).join('');
+    select.innerHTML = `<option value="">${escapeHtml(emptyLabel)}</option>${options}`;
   }
 
   function uniqueValues(rows, field) {
     return [...new Set(rows.map((row) => row[field]).filter(Boolean))].sort();
+  }
+
+  function uniqueOptionValues(options) {
+    const seen = new Map();
+    options.forEach((option) => {
+      if (!option?.value || seen.has(option.value)) return;
+      seen.set(option.value, option);
+    });
+    return [...seen.values()];
   }
 
   function aggregateBy(rows, field, valueField) {
@@ -578,6 +688,51 @@
       notation: 'compact',
       maximumFractionDigits: 1
     }).format(Number(value || 0));
+  }
+
+  function extractMonthToken(value) {
+    const parsed = String(value || '');
+    return parsed ? parsed.slice(0, 7) : '';
+  }
+
+  function parsePeriodParts(value) {
+    const normalized = String(value || '').trim();
+    if (!normalized) return null;
+
+    const isoMonth = normalized.match(/^(\d{4})[-/](\d{1,2})$/);
+    if (isoMonth) {
+      return {
+        year: Number(isoMonth[1]),
+        month: Number(isoMonth[2]),
+        monthLabel: getMonthLabel(Number(isoMonth[2])),
+        normalized: `${isoMonth[1]}-${String(isoMonth[2]).padStart(2, '0')}`
+      };
+    }
+
+    const brMonth = normalized.match(/^(\d{1,2})[-/](\d{4})$/);
+    if (brMonth) {
+      return {
+        year: Number(brMonth[2]),
+        month: Number(brMonth[1]),
+        monthLabel: getMonthLabel(Number(brMonth[1])),
+        normalized: `${brMonth[2]}-${String(brMonth[1]).padStart(2, '0')}`
+      };
+    }
+
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return null;
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    return {
+      year,
+      month,
+      monthLabel: getMonthLabel(month),
+      normalized: `${year}-${String(month).padStart(2, '0')}`
+    };
+  }
+
+  function getMonthLabel(month) {
+    return ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][month - 1] || String(month);
   }
 
   function setText(id, value) {
