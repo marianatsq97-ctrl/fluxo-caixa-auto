@@ -11,6 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body data-page="dashboard">
     <main class="page page-login dashboard-page">
@@ -40,66 +41,99 @@
         </nav>
 
         <section class="tab-panel is-active" data-tab-panel="projecoes">
-          <div class="stats-grid dashboard-kpis">
-            <article class="stat-card accent">
-              <span>Total faturado</span>
-              <strong id="projTotalFaturado">R$ 0,00</strong>
-            </article>
-            <article class="stat-card">
-              <span>Projetado</span>
-              <strong id="projTotalProjetado">R$ 0,00</strong>
-            </article>
-            <article class="stat-card">
-              <span>Realizado</span>
-              <strong id="projTotalRealizado">R$ 0,00</strong>
-            </article>
-            <article class="stat-card">
-              <span>Registros</span>
-              <strong id="projTotalRegistros">0</strong>
-            </article>
-          </div>
+          <div class="executive-section executive-section-centered">
+            <header class="executive-section-header">
+              <span class="eyebrow">tb_projecoes</span>
+              <h2>Painel executivo de projeções e faturamento</h2>
+              <p>
+                Visão consolidada da planilha “Volumes e Faturamento”, com indicadores no topo, gráficos centrais e
+                detalhamento operacional na base.
+              </p>
+            </header>
 
-          <div class="charts-grid charts-grid-three">
-            <article class="premium-card inner-card chart-card">
-              <div class="section-heading compact-heading"><h2>Realizado x projetado</h2></div>
-              <div id="projComparativoChart" class="chart-list"></div>
-            </article>
-            <article class="premium-card inner-card chart-card">
-              <div class="section-heading compact-heading"><h2>Faturamento por unidade</h2></div>
-              <div id="projFaturamentoChart" class="chart-list"></div>
-            </article>
-            <article class="premium-card inner-card chart-card">
-              <div class="section-heading compact-heading"><h2>Volume por unidade</h2></div>
-              <div id="projVolumeChart" class="chart-list"></div>
-            </article>
-          </div>
+            <div class="stats-grid dashboard-kpis proj-kpis-grid">
+              <article class="stat-card premium-kpi accent">
+                <span>Total faturado</span>
+                <strong id="projTotalFaturado">R$ 0,00</strong>
+              </article>
+              <article class="stat-card premium-kpi">
+                <span>Projetado</span>
+                <strong id="projTotalProjetado">R$ 0,00</strong>
+              </article>
+              <article class="stat-card premium-kpi">
+                <span>Realizado</span>
+                <strong id="projTotalRealizado">R$ 0,00</strong>
+              </article>
+              <article class="stat-card premium-kpi">
+                <span>Registros</span>
+                <strong id="projTotalRegistros">0</strong>
+              </article>
+            </div>
 
-          <article class="premium-card inner-card table-panel">
-            <div class="section-heading compact-heading">
-              <div>
-                <span class="eyebrow">tb_projecoes</span>
-                <h2>Projeções e faturamento</h2>
+            <div class="proj-visual-grid">
+              <article class="premium-card inner-card chart-panel chart-panel-wide">
+                <div class="section-heading compact-heading">
+                  <div>
+                    <span class="eyebrow">Comparativo</span>
+                    <h2>Realizado x projetado</h2>
+                  </div>
+                </div>
+                <div class="chart-canvas-shell">
+                  <canvas id="projComparativoChart" aria-label="Gráfico realizado versus projetado"></canvas>
+                </div>
+              </article>
+
+              <article class="premium-card inner-card chart-panel">
+                <div class="section-heading compact-heading">
+                  <div>
+                    <span class="eyebrow">Unidade de negócio</span>
+                    <h2>Faturamento por unidade</h2>
+                  </div>
+                </div>
+                <div class="chart-canvas-shell">
+                  <canvas id="projFaturamentoChart" aria-label="Gráfico de faturamento por unidade"></canvas>
+                </div>
+              </article>
+
+              <article class="premium-card inner-card chart-panel">
+                <div class="section-heading compact-heading">
+                  <div>
+                    <span class="eyebrow">Unidade de negócio</span>
+                    <h2>Volume por unidade</h2>
+                  </div>
+                </div>
+                <div class="chart-canvas-shell">
+                  <canvas id="projVolumeChart" aria-label="Gráfico de volume por unidade"></canvas>
+                </div>
+              </article>
+            </div>
+
+            <article class="premium-card inner-card table-panel proj-table-panel">
+              <div class="section-heading compact-heading">
+                <div>
+                  <span class="eyebrow">Base detalhada</span>
+                  <h2>Volumes e faturamento por unidade de negócio</h2>
+                </div>
               </div>
-            </div>
-            <div class="table-shell compact-table-shell">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Período</th>
-                    <th>Unidade de negócio</th>
-                    <th>Unidade de medida</th>
-                    <th>Volume realizado</th>
-                    <th>Volume médio/dia</th>
-                    <th>Volume projetado</th>
-                    <th>Faturamento realizado</th>
-                    <th>Faturamento médio/dia útil</th>
-                    <th>Faturamento projetado</th>
-                  </tr>
-                </thead>
-                <tbody id="projecoesTableBody"></tbody>
-              </table>
-            </div>
-          </article>
+              <div class="table-shell executive-table-shell">
+                <table class="executive-table">
+                  <thead>
+                    <tr>
+                      <th>Unidade de negócio</th>
+                      <th>Unidade de medida</th>
+                      <th class="numeric-column">Volume realizado</th>
+                      <th class="numeric-column">Volume médio realizado por dia</th>
+                      <th class="numeric-column">Volume projetado total do período</th>
+                      <th class="numeric-column">Faturamento realizado</th>
+                      <th class="numeric-column">Faturamento médio realizado por dia útil</th>
+                      <th class="numeric-column">Faturamento projetado até o final do mês</th>
+                    </tr>
+                  </thead>
+                  <tbody id="projecoesTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
         </section>
 
         <section class="tab-panel" data-tab-panel="receber">
