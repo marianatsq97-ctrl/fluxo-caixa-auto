@@ -728,6 +728,85 @@ td {
   justify-content: center;
 }
 
+.executive-section {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  gap: 28px;
+}
+
+.executive-section-centered {
+  justify-items: center;
+}
+
+.executive-section-header {
+  width: min(100%, 940px);
+  text-align: center;
+  display: grid;
+  gap: 10px;
+}
+
+.executive-section-header p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.proj-kpis-grid {
+  width: min(100%, 1120px);
+}
+
+.premium-kpi {
+  min-height: 148px;
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.04));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.premium-kpi span {
+  font-size: 0.88rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.premium-kpi strong {
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+}
+
+.proj-visual-grid {
+  width: min(100%, 1160px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  align-items: stretch;
+}
+
+.chart-panel {
+  padding: 24px;
+}
+
+.chart-panel-wide {
+  grid-column: 1 / -1;
+}
+
+.chart-canvas-shell {
+  position: relative;
+  min-height: 320px;
+  width: 100%;
+}
+
+.chart-panel-wide .chart-canvas-shell {
+  min-height: 360px;
+}
+
+.chart-canvas-shell canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .charts-grid {
   display: grid;
   gap: 20px;
@@ -745,6 +824,44 @@ td {
 
 .table-panel {
   margin-top: 24px;
+}
+
+.proj-table-panel {
+  width: min(100%, 1160px);
+  justify-self: center;
+  padding: 24px;
+}
+
+.executive-table-shell {
+  background: rgba(4, 9, 22, 0.62);
+}
+
+.executive-table {
+  min-width: 1040px;
+}
+
+.executive-table thead th {
+  position: sticky;
+  top: 0;
+  background: rgba(11, 17, 34, 0.98);
+  z-index: 1;
+}
+
+.numeric-column,
+.numeric-cell {
+  text-align: right;
+}
+
+.executive-table tbody td {
+  color: #e7edff;
+}
+
+.executive-table tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.executive-table tbody tr:hover {
+  background: rgba(255, 122, 26, 0.08);
 }
 
 .filters-row {
@@ -786,7 +903,21 @@ td {
 @media (max-width: 960px) {
   .dashboard-kpis,
   .charts-grid-three,
-  .filters-row {
+  .filters-row,
+  .proj-visual-grid {
     grid-template-columns: 1fr;
+  }
+
+  .premium-kpi {
+    min-height: 124px;
+  }
+
+  .chart-panel-wide {
+    grid-column: auto;
+  }
+
+  .chart-canvas-shell,
+  .chart-panel-wide .chart-canvas-shell {
+    min-height: 280px;
   }
 }
