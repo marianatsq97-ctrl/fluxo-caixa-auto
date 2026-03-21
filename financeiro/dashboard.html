@@ -41,8 +41,8 @@
         </nav>
 
         <section class="tab-panel is-active" data-tab-panel="projecoes">
-          <div class="executive-section executive-section-centered">
-            <header class="executive-section-header">
+          <div class="dashboard-section-shell executive-section executive-section-centered">
+            <header class="dashboard-section-header executive-section-header">
               <span class="eyebrow">tb_projecoes</span>
               <h2>Painel executivo de projeções e faturamento</h2>
               <p>
@@ -51,7 +51,22 @@
               </p>
             </header>
 
-            <div class="stats-grid dashboard-kpis proj-kpis-grid">
+            <div class="filters-row tab-filters-grid">
+              <label class="filter-field">
+                <span>Visualização</span>
+                <select id="projViewFilter"></select>
+              </label>
+              <label class="filter-field">
+                <span>Mês</span>
+                <select id="projMonthFilter"></select>
+              </label>
+              <label class="filter-field">
+                <span>Ano</span>
+                <select id="projYearFilter"></select>
+              </label>
+            </div>
+
+            <div class="stats-grid dashboard-kpis dashboard-kpis-grid proj-kpis-grid">
               <article class="stat-card premium-kpi accent">
                 <span>Total faturado</span>
                 <strong id="projTotalFaturado">R$ 0,00</strong>
@@ -70,12 +85,12 @@
               </article>
             </div>
 
-            <div class="proj-visual-grid">
-              <article class="premium-card inner-card chart-panel chart-panel-wide">
+            <div class="dashboard-chart-grid proj-visual-grid">
+              <article class="premium-card inner-card chart-panel">
                 <div class="section-heading compact-heading">
                   <div>
-                    <span class="eyebrow">Comparativo por período</span>
-                    <h2>Realizado x projetado por período</h2>
+                    <span class="eyebrow">Comparativo</span>
+                    <h2>Realizado x projetado</h2>
                   </div>
                 </div>
                 <div class="chart-canvas-shell">
@@ -98,8 +113,8 @@
               <article class="premium-card inner-card chart-panel">
                 <div class="section-heading compact-heading">
                   <div>
-                    <span class="eyebrow">Tendência financeira</span>
-                    <h2>Faturamento médio x projetado</h2>
+                    <span class="eyebrow">Volume por unidade</span>
+                    <h2>Volume projetado por unidade</h2>
                   </div>
                 </div>
                 <div class="chart-canvas-shell">
@@ -108,7 +123,7 @@
               </article>
             </div>
 
-            <article class="premium-card inner-card table-panel proj-table-panel">
+            <article class="premium-card inner-card table-panel dashboard-table-panel proj-table-panel">
               <div class="section-heading compact-heading">
                 <div>
                   <span class="eyebrow">Base detalhada</span>
@@ -137,155 +152,179 @@
         </section>
 
         <section class="tab-panel" data-tab-panel="receber">
-          <div class="stats-grid dashboard-kpis">
-            <article class="stat-card accent">
-              <span>Total cliente</span>
-              <strong id="receberTotalClientes">0</strong>
-            </article>
-            <article class="stat-card">
-              <span>Total portador</span>
-              <strong id="receberTotalPortadores">0</strong>
-            </article>
-            <article class="stat-card">
-              <span>Valor total</span>
-              <strong id="receberTotalValor">R$ 0,00</strong>
-            </article>
-            <article class="stat-card">
-              <span>Títulos</span>
-              <strong id="receberTotalTitulos">0</strong>
-            </article>
-          </div>
+          <div class="dashboard-section-shell executive-section executive-section-centered">
+            <header class="dashboard-section-header executive-section-header">
+              <span class="eyebrow">tb_a_receber</span>
+              <h2>Painel executivo de contas a receber</h2>
+              <p>Filtros operacionais, totais próprios da carteira, gráficos por vencimento e detalhamento da base.</p>
+            </header>
 
-          <div class="filters-row">
-            <label class="filter-field">
-              <span>Cliente</span>
-              <select id="receberClienteFilter"></select>
-            </label>
-            <label class="filter-field">
-              <span>Portador</span>
-              <select id="receberPortadorFilter"></select>
-            </label>
-            <label class="filter-field wide-field">
-              <span>Título / documento</span>
-              <input id="receberTextoFilter" type="text" placeholder="Filtrar por documento ou cliente" />
-            </label>
-          </div>
+            <div class="filters-row tab-filters-grid filters-grid-four">
+              <label class="filter-field">
+                <span>Cliente</span>
+                <select id="receberClienteFilter"></select>
+              </label>
+              <label class="filter-field">
+                <span>Portador</span>
+                <select id="receberPortadorFilter"></select>
+              </label>
+              <label class="filter-field">
+                <span>Classificação</span>
+                <select id="receberClassificacaoFilter"></select>
+              </label>
+              <label class="filter-field">
+                <span>Vencimento</span>
+                <input id="receberVencimentoFilter" type="month" />
+              </label>
+            </div>
 
-          <div class="charts-grid charts-grid-three">
-            <article class="premium-card inner-card chart-card">
-              <div class="section-heading compact-heading"><h2>Faixa de vencimento</h2></div>
-              <div id="receberFaixaChart" class="chart-list"></div>
-            </article>
-            <article class="premium-card inner-card chart-card">
-              <div class="section-heading compact-heading"><h2>Clientes</h2></div>
-              <div id="receberClienteChart" class="chart-list"></div>
-            </article>
-            <article class="premium-card inner-card chart-card">
-              <div class="section-heading compact-heading"><h2>Portadores</h2></div>
-              <div id="receberPortadorChart" class="chart-list"></div>
-            </article>
-          </div>
+            <div class="stats-grid dashboard-kpis dashboard-kpis-grid">
+              <article class="stat-card premium-kpi accent">
+                <span>Total a receber</span>
+                <strong id="receberTotalValor">R$ 0,00</strong>
+              </article>
+              <article class="stat-card premium-kpi">
+                <span>Total clientes</span>
+                <strong id="receberTotalClientes">0</strong>
+              </article>
+              <article class="stat-card premium-kpi">
+                <span>Total portador</span>
+                <strong id="receberTotalPortadores">0</strong>
+              </article>
+              <article class="stat-card premium-kpi">
+                <span>Quantidade de títulos</span>
+                <strong id="receberTotalTitulos">0</strong>
+              </article>
+            </div>
 
-          <article class="premium-card inner-card table-panel">
-            <div class="section-heading compact-heading">
-              <div>
-                <span class="eyebrow">tb_a_receber</span>
-                <h2>Títulos a receber</h2>
+            <div class="dashboard-chart-grid">
+              <article class="premium-card inner-card chart-panel">
+                <div class="section-heading compact-heading"><h2>Por classificação de vencimento</h2></div>
+                <div class="chart-canvas-shell"><canvas id="receberFaixaChart"></canvas></div>
+              </article>
+              <article class="premium-card inner-card chart-panel">
+                <div class="section-heading compact-heading"><h2>Por cliente</h2></div>
+                <div class="chart-canvas-shell"><canvas id="receberClienteChart"></canvas></div>
+              </article>
+              <article class="premium-card inner-card chart-panel">
+                <div class="section-heading compact-heading"><h2>Por portador</h2></div>
+                <div class="chart-canvas-shell"><canvas id="receberPortadorChart"></canvas></div>
+              </article>
+            </div>
+
+            <article class="premium-card inner-card table-panel dashboard-table-panel">
+              <div class="section-heading compact-heading">
+                <div>
+                  <span class="eyebrow">Base detalhada</span>
+                  <h2>Títulos a receber</h2>
+                </div>
               </div>
-            </div>
-            <div class="table-shell compact-table-shell">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th>Portador</th>
-                    <th>Documento</th>
-                    <th>Vencimento</th>
-                    <th>Saldo</th>
-                    <th>Dias</th>
-                    <th>Classificação</th>
-                  </tr>
-                </thead>
-                <tbody id="receberTableBody"></tbody>
-              </table>
-            </div>
-          </article>
+              <div class="table-shell compact-table-shell">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Portador</th>
+                      <th>Documento</th>
+                      <th>Vencimento</th>
+                      <th>Saldo</th>
+                      <th>Dias</th>
+                      <th>Classificação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="receberTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
         </section>
 
         <section class="tab-panel" data-tab-panel="inadimplentes">
-          <div class="stats-grid dashboard-kpis">
-            <article class="stat-card accent">
-              <span>Total cliente</span>
-              <strong id="inadTotalClientes">0</strong>
-            </article>
-            <article class="stat-card">
-              <span>Total portador</span>
-              <strong id="inadTotalPortadores">0</strong>
-            </article>
-            <article class="stat-card">
-              <span>Valor total vencido</span>
-              <strong id="inadTotalValor">R$ 0,00</strong>
-            </article>
-            <article class="stat-card">
-              <span>Títulos</span>
-              <strong id="inadTotalTitulos">0</strong>
-            </article>
-          </div>
+          <div class="dashboard-section-shell executive-section executive-section-centered">
+            <header class="dashboard-section-header executive-section-header">
+              <span class="eyebrow">tb_inadimplentes</span>
+              <h2>Painel executivo de inadimplentes</h2>
+              <p>Estrutura padronizada com filtros próprios da inadimplência, totais vencidos e análise por atraso.</p>
+            </header>
 
-          <div class="filters-row">
-            <label class="filter-field">
-              <span>Cliente</span>
-              <select id="inadClienteFilter"></select>
-            </label>
-            <label class="filter-field">
-              <span>Portador</span>
-              <select id="inadPortadorFilter"></select>
-            </label>
-            <label class="filter-field wide-field">
-              <span>Título / documento</span>
-              <input id="inadTextoFilter" type="text" placeholder="Filtrar por documento ou cliente" />
-            </label>
-          </div>
+            <div class="filters-row tab-filters-grid filters-grid-four">
+              <label class="filter-field">
+                <span>Cliente</span>
+                <select id="inadClienteFilter"></select>
+              </label>
+              <label class="filter-field">
+                <span>Portador</span>
+                <select id="inadPortadorFilter"></select>
+              </label>
+              <label class="filter-field">
+                <span>Faixa de atraso</span>
+                <select id="inadFaixaFilter"></select>
+              </label>
+              <label class="filter-field">
+                <span>Vencimento</span>
+                <input id="inadVencimentoFilter" type="month" />
+              </label>
+            </div>
 
-          <div class="charts-grid charts-grid-three">
-            <article class="premium-card inner-card chart-card">
-              <div class="section-heading compact-heading"><h2>Faixa de atraso</h2></div>
-              <div id="inadFaixaChart" class="chart-list"></div>
-            </article>
-            <article class="premium-card inner-card chart-card">
-              <div class="section-heading compact-heading"><h2>Clientes</h2></div>
-              <div id="inadClienteChart" class="chart-list"></div>
-            </article>
-            <article class="premium-card inner-card chart-card">
-              <div class="section-heading compact-heading"><h2>Portadores</h2></div>
-              <div id="inadPortadorChart" class="chart-list"></div>
-            </article>
-          </div>
+            <div class="stats-grid dashboard-kpis dashboard-kpis-grid">
+              <article class="stat-card premium-kpi accent">
+                <span>Total vencido</span>
+                <strong id="inadTotalValor">R$ 0,00</strong>
+              </article>
+              <article class="stat-card premium-kpi">
+                <span>Total clientes inadimplentes</span>
+                <strong id="inadTotalClientes">0</strong>
+              </article>
+              <article class="stat-card premium-kpi">
+                <span>Total portador</span>
+                <strong id="inadTotalPortadores">0</strong>
+              </article>
+              <article class="stat-card premium-kpi">
+                <span>Quantidade de títulos vencidos</span>
+                <strong id="inadTotalTitulos">0</strong>
+              </article>
+            </div>
 
-          <article class="premium-card inner-card table-panel">
-            <div class="section-heading compact-heading">
-              <div>
-                <span class="eyebrow">tb_inadimplentes</span>
-                <h2>Clientes inadimplentes</h2>
+            <div class="dashboard-chart-grid">
+              <article class="premium-card inner-card chart-panel">
+                <div class="section-heading compact-heading"><h2>Por faixa de atraso</h2></div>
+                <div class="chart-canvas-shell"><canvas id="inadFaixaChart"></canvas></div>
+              </article>
+              <article class="premium-card inner-card chart-panel">
+                <div class="section-heading compact-heading"><h2>Por cliente</h2></div>
+                <div class="chart-canvas-shell"><canvas id="inadClienteChart"></canvas></div>
+              </article>
+              <article class="premium-card inner-card chart-panel">
+                <div class="section-heading compact-heading"><h2>Por portador</h2></div>
+                <div class="chart-canvas-shell"><canvas id="inadPortadorChart"></canvas></div>
+              </article>
+            </div>
+
+            <article class="premium-card inner-card table-panel dashboard-table-panel">
+              <div class="section-heading compact-heading">
+                <div>
+                  <span class="eyebrow">Base detalhada</span>
+                  <h2>Clientes inadimplentes</h2>
+                </div>
               </div>
-            </div>
-            <div class="table-shell compact-table-shell">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th>Portador</th>
-                    <th>Documento</th>
-                    <th>Vencimento</th>
-                    <th>Saldo</th>
-                    <th>Dias</th>
-                    <th>Faixa</th>
-                  </tr>
-                </thead>
-                <tbody id="inadTableBody"></tbody>
-              </table>
-            </div>
-          </article>
+              <div class="table-shell compact-table-shell">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Portador</th>
+                      <th>Documento</th>
+                      <th>Vencimento</th>
+                      <th>Saldo</th>
+                      <th>Dias</th>
+                      <th>Faixa</th>
+                    </tr>
+                  </thead>
+                  <tbody id="inadTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
         </section>
       </section>
     </main>
