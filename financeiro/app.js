@@ -185,58 +185,112 @@
         { label: 'Projetado', value: summary.totalProjetado }
       ], formatCurrency);
       renderChart('projFaturamentoChart', summary.byUnit.map((row) => ({ label: row.unidade, value: row.faturamento_projetado })), formatCurrency);
-      renderChart('projVolumeChart', summary.byUnit.map((row) => ({ label: row.unidade, value: row.volume_projetado })), formatNumber);
+      renderChart('projVolumeChart', summary.byPeriod.map((row) => ({ label: row.periodo, value: row.faturamento_projetado })), formatCurrency);
       return;
     }
 
     renderCanvasChart('projComparativoChart', {
       type: 'bar',
       data: {
-        labels: ['Realizado', 'Projetado'],
-        datasets: [{
-          label: 'Faturamento',
-          data: [summary.totalRealizado, summary.totalProjetado],
-          backgroundColor: ['rgba(255, 122, 26, 0.82)', 'rgba(99, 132, 255, 0.72)'],
-          borderRadius: 12,
-          borderSkipped: false,
-          maxBarThickness: 84
-        }]
+        labels: summary.byPeriod.map((row) => row.periodo),
+        datasets: [
+          {
+            label: 'Realizado',
+            data: summary.byPeriod.map((row) => row.faturamento_realizado),
+            backgroundColor: 'rgba(255, 122, 26, 0.82)',
+            borderColor: 'rgba(255, 145, 69, 1)',
+            borderWidth: 1.5,
+            borderRadius: 10,
+            borderSkipped: false,
+            maxBarThickness: 58
+          },
+          {
+            label: 'Projetado',
+            data: summary.byPeriod.map((row) => row.faturamento_projetado),
+            backgroundColor: 'rgba(99, 132, 255, 0.74)',
+            borderColor: 'rgba(145, 168, 255, 1)',
+            borderWidth: 1.5,
+            borderRadius: 10,
+            borderSkipped: false,
+            maxBarThickness: 58
+          }
+        ]
       },
-      options: buildCurrencyChartOptions()
+      options: buildCurrencyChartOptions({
+        xTitle: 'Período',
+        yTitle: 'Valores financeiros',
+        stacked: false
+      })
     });
 
     renderCanvasChart('projFaturamentoChart', {
       type: 'bar',
       data: {
         labels: summary.byUnit.map((row) => row.unidade),
-        datasets: [{
-          label: 'Faturamento projetado',
-          data: summary.byUnit.map((row) => row.faturamento_projetado),
-          backgroundColor: 'rgba(255, 122, 26, 0.72)',
-          borderColor: 'rgba(255, 145, 69, 1)',
-          borderWidth: 1.5,
-          borderRadius: 10,
-          borderSkipped: false
-        }]
+        datasets: [
+          {
+            label: 'Realizado',
+            data: summary.byUnit.map((row) => row.faturamento_realizado),
+            backgroundColor: 'rgba(255, 122, 26, 0.82)',
+            borderColor: 'rgba(255, 145, 69, 1)',
+            borderWidth: 1.5,
+            borderRadius: 10,
+            borderSkipped: false
+          },
+          {
+            label: 'Projetado',
+            data: summary.byUnit.map((row) => row.faturamento_projetado),
+            backgroundColor: 'rgba(99, 132, 255, 0.74)',
+            borderColor: 'rgba(145, 168, 255, 1)',
+            borderWidth: 1.5,
+            borderRadius: 10,
+            borderSkipped: false
+          }
+        ]
       },
-      options: buildCurrencyChartOptions()
+      options: buildCurrencyChartOptions({
+        xTitle: 'Unidade de negócio',
+        yTitle: 'Valores financeiros',
+        stacked: false
+      })
     });
 
     renderCanvasChart('projVolumeChart', {
-      type: 'bar',
+      type: 'line',
       data: {
-        labels: summary.byUnit.map((row) => row.unidade),
-        datasets: [{
-          label: 'Volume projetado',
-          data: summary.byUnit.map((row) => row.volume_projetado),
-          backgroundColor: 'rgba(99, 132, 255, 0.72)',
-          borderColor: 'rgba(145, 168, 255, 1)',
-          borderWidth: 1.5,
-          borderRadius: 10,
-          borderSkipped: false
-        }]
+        labels: summary.byPeriod.map((row) => row.periodo),
+        datasets: [
+          {
+            label: 'Faturamento médio',
+            data: summary.byPeriod.map((row) => row.faturamento_medio),
+            borderColor: 'rgba(255, 208, 123, 1)',
+            backgroundColor: 'rgba(255, 208, 123, 0.18)',
+            borderWidth: 3,
+            pointRadius: 4,
+            pointHoverRadius: 5,
+            pointBackgroundColor: 'rgba(255, 208, 123, 1)',
+            tension: 0.34,
+            fill: false
+          },
+          {
+            label: 'Faturamento projetado',
+            data: summary.byPeriod.map((row) => row.faturamento_projetado),
+            borderColor: 'rgba(99, 132, 255, 1)',
+            backgroundColor: 'rgba(99, 132, 255, 0.18)',
+            borderWidth: 3,
+            pointRadius: 4,
+            pointHoverRadius: 5,
+            pointBackgroundColor: 'rgba(99, 132, 255, 1)',
+            tension: 0.34,
+            fill: false
+          }
+        ]
       },
-      options: buildNumberChartOptions()
+      options: buildCurrencyChartOptions({
+        xTitle: 'Período',
+        yTitle: 'Valores financeiros',
+        stacked: false
+      })
     });
   }
 
@@ -274,15 +328,24 @@
 
   function summarizeProjecoes(rows) {
     const byUnitMap = new Map();
+    const byPeriodMap = new Map();
 
     rows.forEach((row) => {
-      const key = row.unidade || 'Sem unidade';
-      const current = byUnitMap.get(key) || {
-        unidade: key,
+      const unitKey = row.unidade || 'Sem unidade';
+      const periodKey = row.periodo || 'Sem período';
+      const current = byUnitMap.get(unitKey) || {
+        unidade: unitKey,
         unidade_medida: row.unidade_medida || '-',
         volume_realizado: 0,
         volume_medio: 0,
         volume_projetado: 0,
+        faturamento_realizado: 0,
+        faturamento_medio: 0,
+        faturamento_projetado: 0,
+        registros: 0
+      };
+      const currentPeriod = byPeriodMap.get(periodKey) || {
+        periodo: periodKey,
         faturamento_realizado: 0,
         faturamento_medio: 0,
         faturamento_projetado: 0,
@@ -297,15 +360,22 @@
       current.faturamento_medio += Number(row.faturamento_medio || 0);
       current.faturamento_projetado += Number(row.faturamento_projetado || 0);
       current.registros += 1;
-      byUnitMap.set(key, current);
+      byUnitMap.set(unitKey, current);
+
+      currentPeriod.faturamento_realizado += Number(row.faturamento_realizado || 0);
+      currentPeriod.faturamento_medio += Number(row.faturamento_medio || 0);
+      currentPeriod.faturamento_projetado += Number(row.faturamento_projetado || 0);
+      currentPeriod.registros += 1;
+      byPeriodMap.set(periodKey, currentPeriod);
     });
 
     const byUnit = [...byUnitMap.values()].sort((a, b) => b.faturamento_projetado - a.faturamento_projetado);
+    const byPeriod = [...byPeriodMap.values()].sort((a, b) => comparePeriodLabels(a.periodo, b.periodo));
     const totalRealizado = sum(rows, 'faturamento_realizado');
     const totalProjetado = sum(rows, 'faturamento_projetado');
     const totalFaturado = totalRealizado + sum(rows, 'faturamento_medio');
 
-    return { totalRealizado, totalProjetado, totalFaturado, byUnit };
+    return { totalRealizado, totalProjetado, totalFaturado, byUnit, byPeriod };
   }
 
   function renderProjectionTable(rows) {
@@ -407,12 +477,14 @@
     return canvasId === 'projVolumeChart' ? formatNumber(value) : formatCurrency(value);
   }
 
-  function buildCurrencyChartOptions() {
+  function buildCurrencyChartOptions({ xTitle, yTitle, stacked = false } = {}) {
     return {
       scales: {
-        x: buildAxisOptions(),
+        x: buildAxisOptions(xTitle, stacked),
         y: {
           beginAtZero: true,
+          stacked,
+          title: buildAxisTitle(yTitle),
           ticks: {
             color: '#99a5c3',
             callback: (value) => compactCurrency(value)
@@ -425,12 +497,14 @@
     };
   }
 
-  function buildNumberChartOptions() {
+  function buildNumberChartOptions({ xTitle, yTitle, stacked = false } = {}) {
     return {
       scales: {
-        x: buildAxisOptions(),
+        x: buildAxisOptions(xTitle, stacked),
         y: {
           beginAtZero: true,
+          stacked,
+          title: buildAxisTitle(yTitle),
           ticks: {
             color: '#99a5c3',
             callback: (value) => compactNumber(value)
@@ -443,8 +517,10 @@
     };
   }
 
-  function buildAxisOptions() {
+  function buildAxisOptions(title, stacked = false) {
     return {
+      stacked,
+      title: buildAxisTitle(title),
       ticks: {
         color: '#d4def8',
         maxRotation: 0,
@@ -454,6 +530,38 @@
         display: false
       }
     };
+  }
+
+  function buildAxisTitle(text) {
+    return text
+      ? {
+          display: true,
+          text,
+          color: '#99a5c3',
+          font: {
+            size: 12,
+            weight: '600'
+          }
+        }
+      : undefined;
+  }
+
+  function comparePeriodLabels(left, right) {
+    const leftDate = normalizePeriodLabel(left);
+    const rightDate = normalizePeriodLabel(right);
+    return leftDate - rightDate;
+  }
+
+  function normalizePeriodLabel(value) {
+    const normalized = String(value || '').trim();
+    const isoMonth = normalized.match(/^(\d{4})[-/](\d{1,2})$/);
+    if (isoMonth) return new Date(Number(isoMonth[1]), Number(isoMonth[2]) - 1, 1).getTime();
+
+    const brMonth = normalized.match(/^(\d{1,2})[-/](\d{4})$/);
+    if (brMonth) return new Date(Number(brMonth[2]), Number(brMonth[1]) - 1, 1).getTime();
+
+    const parsed = Date.parse(normalized);
+    return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
   }
 
   function compactCurrency(value) {
