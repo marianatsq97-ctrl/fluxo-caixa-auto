@@ -10,6 +10,7 @@
     escapeHtml,
     normalizeText
   } = window.FinanceiroUtils;
+  const chartRegistry = new Map();
 
   const CREDENTIALS = {
     admin: { password: 'admin123', role: 'admin', redirect: 'admin.html' },
@@ -75,22 +76,15 @@
   }
 
   function renderProjecoes(rows) {
-    const totalRealizado = sum(rows, 'faturamento_realizado');
-    const totalProjetado = sum(rows, 'faturamento_projetado');
-    const totalFaturado = totalRealizado + sum(rows, 'faturamento_medio');
+    const summary = summarizeProjecoes(rows);
 
-    setText('projTotalFaturado', formatCurrency(totalFaturado));
-    setText('projTotalProjetado', formatCurrency(totalProjetado));
-    setText('projTotalRealizado', formatCurrency(totalRealizado));
+    setText('projTotalFaturado', formatCurrency(summary.totalFaturado));
+    setText('projTotalProjetado', formatCurrency(summary.totalProjetado));
+    setText('projTotalRealizado', formatCurrency(summary.totalRealizado));
     setText('projTotalRegistros', String(rows.length));
 
-    renderChart('projComparativoChart', [
-      { label: 'Realizado', value: totalRealizado },
-      { label: 'Projetado', value: totalProjetado }
-    ], formatCurrency);
-    renderChart('projFaturamentoChart', aggregateBy(rows, 'unidade', 'faturamento_projetado'), formatCurrency);
-    renderChart('projVolumeChart', aggregateBy(rows, 'unidade', 'volume_projetado'), formatNumber);
-    renderTable('projecoesTableBody', rows.slice(0, 16), ['periodo', 'unidade', 'unidade_medida', 'volume_realizado', 'volume_medio', 'volume_projetado', 'faturamento_realizado', 'faturamento_medio', 'faturamento_projetado']);
+    renderProjectionCharts(summary);
+    renderProjectionTable(summary.byUnit);
   }
 
   function setupReceber(rows) {
@@ -183,6 +177,159 @@
       : '<div class="empty-state-cell">Sem dados para gráfico.</div>';
   }
 
+  function renderProjectionCharts(summary) {
+    const chartApi = window.Chart;
+    if (!chartApi) {
+      renderChart('projComparativoChart', [
+        { label: 'Realizado', value: summary.totalRealizado },
+        { label: 'Projetado', value: summary.totalProjetado }
+      ], formatCurrency);
+      renderChart('projFaturamentoChart', summary.byUnit.map((row) => ({ label: row.unidade, value: row.faturamento_projetado })), formatCurrency);
+      renderChart('projVolumeChart', summary.byUnit.map((row) => ({ label: row.unidade, value: row.volume_projetado })), formatNumber);
+      return;
+    }
+
+    renderCanvasChart('projComparativoChart', {
+      type: 'bar',
+      data: {
+        labels: ['Realizado', 'Projetado'],
+        datasets: [{
+          label: 'Faturamento',
+          data: [summary.totalRealizado, summary.totalProjetado],
+          backgroundColor: ['rgba(255, 122, 26, 0.82)', 'rgba(99, 132, 255, 0.72)'],
+          borderRadius: 12,
+          borderSkipped: false,
+          maxBarThickness: 84
+        }]
+      },
+      options: buildCurrencyChartOptions()
+    });
+
+    renderCanvasChart('projFaturamentoChart', {
+      type: 'bar',
+      data: {
+        labels: summary.byUnit.map((row) => row.unidade),
+        datasets: [{
+          label: 'Faturamento projetado',
+          data: summary.byUnit.map((row) => row.faturamento_projetado),
+          backgroundColor: 'rgba(255, 122, 26, 0.72)',
+          borderColor: 'rgba(255, 145, 69, 1)',
+          borderWidth: 1.5,
+          borderRadius: 10,
+          borderSkipped: false
+        }]
+      },
+      options: buildCurrencyChartOptions()
+    });
+
+    renderCanvasChart('projVolumeChart', {
+      type: 'bar',
+      data: {
+        labels: summary.byUnit.map((row) => row.unidade),
+        datasets: [{
+          label: 'Volume projetado',
+          data: summary.byUnit.map((row) => row.volume_projetado),
+          backgroundColor: 'rgba(99, 132, 255, 0.72)',
+          borderColor: 'rgba(145, 168, 255, 1)',
+          borderWidth: 1.5,
+          borderRadius: 10,
+          borderSkipped: false
+        }]
+      },
+      options: buildNumberChartOptions()
+    });
+  }
+
+  function renderCanvasChart(canvasId, config) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !window.Chart) return;
+
+    const previous = chartRegistry.get(canvasId);
+    if (previous) previous.destroy();
+
+    const chart = new window.Chart(canvas, {
+      ...config,
+      options: {
+        maintainAspectRatio: false,
+        responsive: true,
+        plugins: {
+          legend: {
+            display: Boolean(config.data?.datasets?.length > 1)
+          },
+          tooltip: {
+            callbacks: {
+              label(context) {
+                const label = context.dataset?.label ? `${context.dataset.label}: ` : '';
+                return `${label}${formatChartValue(context.raw, canvasId)}`;
+              }
+            }
+          }
+        },
+        ...config.options
+      }
+    });
+
+    chartRegistry.set(canvasId, chart);
+  }
+
+  function summarizeProjecoes(rows) {
+    const byUnitMap = new Map();
+
+    rows.forEach((row) => {
+      const key = row.unidade || 'Sem unidade';
+      const current = byUnitMap.get(key) || {
+        unidade: key,
+        unidade_medida: row.unidade_medida || '-',
+        volume_realizado: 0,
+        volume_medio: 0,
+        volume_projetado: 0,
+        faturamento_realizado: 0,
+        faturamento_medio: 0,
+        faturamento_projetado: 0,
+        registros: 0
+      };
+
+      current.unidade_medida = current.unidade_medida === '-' ? row.unidade_medida || '-' : current.unidade_medida;
+      current.volume_realizado += Number(row.volume_realizado || 0);
+      current.volume_medio += Number(row.volume_medio || 0);
+      current.volume_projetado += Number(row.volume_projetado || 0);
+      current.faturamento_realizado += Number(row.faturamento_realizado || 0);
+      current.faturamento_medio += Number(row.faturamento_medio || 0);
+      current.faturamento_projetado += Number(row.faturamento_projetado || 0);
+      current.registros += 1;
+      byUnitMap.set(key, current);
+    });
+
+    const byUnit = [...byUnitMap.values()].sort((a, b) => b.faturamento_projetado - a.faturamento_projetado);
+    const totalRealizado = sum(rows, 'faturamento_realizado');
+    const totalProjetado = sum(rows, 'faturamento_projetado');
+    const totalFaturado = totalRealizado + sum(rows, 'faturamento_medio');
+
+    return { totalRealizado, totalProjetado, totalFaturado, byUnit };
+  }
+
+  function renderProjectionTable(rows) {
+    const target = document.getElementById('projecoesTableBody');
+    if (!target) return;
+
+    target.innerHTML = rows.length
+      ? rows
+          .map((row) => `
+            <tr>
+              <td>${escapeHtml(row.unidade || '-')}</td>
+              <td>${escapeHtml(row.unidade_medida || '-')}</td>
+              <td class="numeric-cell">${escapeHtml(formatNumber(row.volume_realizado))}</td>
+              <td class="numeric-cell">${escapeHtml(formatNumber(row.volume_medio))}</td>
+              <td class="numeric-cell">${escapeHtml(formatNumber(row.volume_projetado))}</td>
+              <td class="numeric-cell">${escapeHtml(formatCurrency(row.faturamento_realizado))}</td>
+              <td class="numeric-cell">${escapeHtml(formatCurrency(row.faturamento_medio))}</td>
+              <td class="numeric-cell">${escapeHtml(formatCurrency(row.faturamento_projetado))}</td>
+            </tr>
+          `)
+          .join('')
+      : '<tr><td colspan="8" class="empty-state-cell">Sem dados disponíveis.</td></tr>';
+  }
+
   function renderTable(targetId, rows, columns) {
     const target = document.getElementById(targetId);
     if (!target) return;
@@ -254,6 +401,75 @@
 
   function formatNumber(value) {
     return Number(value || 0).toLocaleString('pt-BR');
+  }
+
+  function formatChartValue(value, canvasId) {
+    return canvasId === 'projVolumeChart' ? formatNumber(value) : formatCurrency(value);
+  }
+
+  function buildCurrencyChartOptions() {
+    return {
+      scales: {
+        x: buildAxisOptions(),
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: '#99a5c3',
+            callback: (value) => compactCurrency(value)
+          },
+          grid: {
+            color: 'rgba(255,255,255,0.07)'
+          }
+        }
+      }
+    };
+  }
+
+  function buildNumberChartOptions() {
+    return {
+      scales: {
+        x: buildAxisOptions(),
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: '#99a5c3',
+            callback: (value) => compactNumber(value)
+          },
+          grid: {
+            color: 'rgba(255,255,255,0.07)'
+          }
+        }
+      }
+    };
+  }
+
+  function buildAxisOptions() {
+    return {
+      ticks: {
+        color: '#d4def8',
+        maxRotation: 0,
+        autoSkip: false
+      },
+      grid: {
+        display: false
+      }
+    };
+  }
+
+  function compactCurrency(value) {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      notation: 'compact',
+      maximumFractionDigits: 1
+    }).format(Number(value || 0));
+  }
+
+  function compactNumber(value) {
+    return new Intl.NumberFormat('pt-BR', {
+      notation: 'compact',
+      maximumFractionDigits: 1
+    }).format(Number(value || 0));
   }
 
   function setText(id, value) {
